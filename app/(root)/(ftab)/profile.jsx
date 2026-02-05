@@ -1,7 +1,6 @@
 import { useTheme } from "@/hooks/ThemeContext";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import axios from "axios";
 import { useRouter } from "expo-router";
 import {
   Award,
@@ -114,7 +113,7 @@ export default function Profile() {
     }
   };
 
-  const handleConnectStripe = async () => {
+  /*const handleConnectStripe = async () => {
     setConnectingStripe(true);
     try {
       const response = await axios.post(
@@ -191,7 +190,7 @@ export default function Profile() {
         },
       ],
     );
-  };
+  };*/
 
   const styles = createStyles(theme);
   const availabilityColors = getAvailabilityColors();
