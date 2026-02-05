@@ -26,6 +26,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import api from "../../../lib/api";
 import { getFreelancerProfile, getUser } from "../../../lib/supabase";
 
 export default function Profile() {
@@ -136,28 +137,22 @@ export default function Profile() {
     }
   };
 
-  /*const handleConnectStripe = async () => {
+  const handleConnectStripe = async () => {
     setConnectingStripe(true);
+
     try {
-      const response = await axios.post(
-        "https://lancerstripe-production.up.railway.app/stripe/connect-account",
-        {
-          userId: user.id,
-          email: user.email,
-          // These will be web URLs that redirect back to your app
-          refreshUrl: `https://lancerstripe-production.up.railway.app/stripe/refresh?userId=${user.id}`,
-          returnUrl: `https://lancerstripe-production.up.railway.app/stripe/success?userId=${user.id}`,
-        },
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        },
-      );
+      console.log("🔐 Connecting Stripe for user:", user.id);
+
+      const response = await api.post("/stripe/connect-account", {
+        userId: user.id,
+        email: user.email,
+        refreshUrl: `${api.defaults.baseURL}/stripe/refresh?userId=${user.id}`,
+        returnUrl: `${api.defaults.baseURL}/stripe/success?userId=${user.id}`,
+      });
 
       const { accountLink } = response.data;
+      console.log("✅ Account link received");
 
-      // Open Stripe onboarding in browser
       await Linking.openURL(accountLink.url);
 
       toast({
@@ -165,10 +160,11 @@ export default function Profile() {
         description: "Complete the onboarding to receive payments",
       });
     } catch (error) {
-      console.error("Stripe connect error:", error);
+      console.error("❌ Stripe connect error:", error);
+
       Alert.alert(
         "Connection Failed",
-        error.response?.data?.error ||
+        error.userMessage ||
           "Failed to connect Stripe account. Please try again.",
       );
     } finally {
@@ -187,16 +183,11 @@ export default function Profile() {
           style: "destructive",
           onPress: async () => {
             try {
-              // Call backend to disconnect
-              await axios.post(
-                "https://lancerstripe-production.up.railway.app/stripe/disconnect-account",
-                {
-                  userId: user.id,
-                  stripeAccountId: stripeAccountId,
-                },
-              );
+              await api.post("/stripe/disconnect-account", {
+                userId: user.id,
+                stripeAccountId: stripeAccountId,
+              });
 
-              // Update local state
               setStripeConnected(false);
               setStripeAccountId(null);
 
@@ -207,13 +198,17 @@ export default function Profile() {
 
               fetchProfile();
             } catch (error) {
-              Alert.alert("Error", "Failed to disconnect Stripe account");
+              console.error("❌ Disconnect error:", error);
+              Alert.alert(
+                "Error",
+                error.userMessage || "Failed to disconnect Stripe account",
+              );
             }
           },
         },
       ],
     );
-  };*/
+  };
 
   const styles = createStyles(theme);
   const availabilityColors = getAvailabilityColors();
@@ -414,12 +409,7 @@ export default function Profile() {
                         </View>
                         <TouchableOpacity
                           style={styles.disconnectButton}
-                          onPress={() =>
-                            Alert.alert(
-                              "Info",
-                              "Disconnect feature coming soon",
-                            )
-                          }
+                          onPress={handleDisconnectStripe}
                           activeOpacity={0.8}
                         >
                           <Text style={styles.disconnectButtonText}>
@@ -430,15 +420,23 @@ export default function Profile() {
                     ) : (
                       <TouchableOpacity
                         style={styles.connectButton}
-                        onPress={() =>
-                          Alert.alert("Info", "Stripe connection coming soon")
-                        }
+                        onPress={handleConnectStripe}
+                        disabled={connectingStripe}
                         activeOpacity={0.8}
                       >
-                        <Wallet size={20} color={theme.surface} />
-                        <Text style={styles.connectButtonText}>
-                          Connect Stripe Account
-                        </Text>
+                        {connectingStripe ? (
+                          <ActivityIndicator
+                            size="small"
+                            color={theme.surface}
+                          />
+                        ) : (
+                          <>
+                            <Wallet size={20} color={theme.surface} />
+                            <Text style={styles.connectButtonText}>
+                              Connect Stripe Account
+                            </Text>
+                          </>
+                        )}
                       </TouchableOpacity>
                     )}
                     <View style={styles.stripeInfo}>

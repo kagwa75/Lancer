@@ -3,7 +3,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { Feather } from "@expo/vector-icons";
 import { useStripe } from "@stripe/stripe-react-native";
-import axios from "axios";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   ArrowLeft,
@@ -31,6 +30,7 @@ import {
   View,
 } from "react-native";
 import PaymentMethodModal from "../../components/PaymentMethodModal";
+import api from "../../lib/api";
 import { supabase } from "../../lib/Client";
 import {
   ClientDetails,
@@ -265,16 +265,13 @@ export default function ProjectDetails() {
         throw new Error("Invalid payment amount");
       }
 
-      const response = await axios.post(
-        "https://lancerstripe-production.up.railway.app/stripe/Intent",
-        {
-          projectId: id,
-          bidId: selectedProposal.id,
-          clientId: user.id,
-          freelancerId: selectedProposal.freelancer_id,
-          amount: amount,
-        },
-      );
+      const response = await api.post("/stripe/Intent", {
+        projectId: id,
+        bidId: selectedProposal.id,
+        clientId: user.id,
+        freelancerId: selectedProposal.freelancer_id,
+        amount: amount,
+      });
 
       const { clientSecret, paymentIntentId } = response.data;
 
@@ -399,18 +396,14 @@ export default function ProjectDetails() {
         throw new Error("Freelancer phone number not found");
       }
 
-      const { data: b2cResponse } = await axios.post(
-        "https://lancermpesabackend-production.up.railway.app/mpesa/b2c-payment",
-        {
-          phoneNumber: profile.phone_number,
-          amount: transaction?.freelancer_amount,
-          remarks: `Project: ${project?.title}`,
-          occasion: `Project #${id}`,
-          transaction: transaction,
-          finalProjectId: id,
-        },
-      );
-
+      const b2cResponse = await api.post("/mpesa/b2c-payment", {
+        phoneNumber: profile.phone_number,
+        amount: transaction?.freelancer_amount,
+        remarks: `Project: ${project?.title}`,
+        occasion: `Project #${id}`,
+        transaction: transaction,
+        finalProjectId: id,
+      });
       await supabase
         .from("transactions")
         .update({
@@ -458,14 +451,11 @@ export default function ProjectDetails() {
           onPress: async () => {
             try {
               setIsLoading(true);
-              const response = await axios.post(
-                "https://lancerstripe-production.up.railway.app/stripe/release-funds",
-                {
-                  projectId: id,
-                  transactionId: transaction.id,
-                  freelancerStripeAccountId: freelancerStripeAccountId,
-                },
-              );
+              const response = await api.post("/stripe/release-funds", {
+                projectId: id,
+                transactionId: transaction.id,
+                freelancerStripeAccountId: freelancerStripeAccountId,
+              });
 
               if (response.status !== 200) {
                 throw new Error(
