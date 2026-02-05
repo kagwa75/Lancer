@@ -34,7 +34,6 @@ yarn-error.*
 .env*.local
 #backend folder
 Backend
-constants/index.js
 # typescript
 *.tsbuildinfo
 
