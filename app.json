@@ -1,0 +1,80 @@
+{
+  "expo": {
+    "name": "lancer",
+    "slug": "jobs",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/lancer.png",
+    "scheme": "jobs",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.jameshub.jobs",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/lancer.png",
+        "backgroundColor": "#ffffff"
+      },
+      "edgeToEdgeEnabled": true,
+      "package": "com.jameshub.jobs"
+    },
+    "web": {
+      "output": "static",
+      "favicon": "./assets/images/lancer.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/lancer.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff"
+        }
+      ],
+      "expo-web-browser",
+      "expo-font",
+      "expo-secure-store",
+      [
+        "@stripe/stripe-react-native",
+        {
+          "merchantIdentifier": "merchant.com.jameshub.jobs",
+          "enableGooglePay": false
+        }
+      ],
+      [
+        "@sentry/react-native/expo",
+        {
+          "url": "https://sentry.io/",
+          "project": "react-native",
+          "organization": "james-hub"
+        }
+      ],
+      "@sentry/react-native",
+      "expo-localization"
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    },
+    "extra": {
+      "stripePublishableKey": "pk_test_51SricTAKaiR3hK9GiZ4f0N0EiuN3yijWRAj80HsSHnKSivm1BLXj7YuHO2C97e0wdWRDk5GVTEs4Xx0PV8CKy5LG00D17tBT3r",
+      "router": {},
+      "eas": {
+        "projectId": "d7983c1e-a9e5-4a7d-b1a8-5489571c2aca"
+      }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/d7983c1e-a9e5-4a7d-b1a8-5489571c2aca"
+    }
+  }
+}

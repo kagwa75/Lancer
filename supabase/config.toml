@@ -1,0 +1,44 @@
+
+[functions.create_escrow]
+enabled = true
+verify_jwt = true
+import_map = "./functions/create_escrow/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/create_escrow/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/create_escrow/*.html" ]
+
+[functions.release-escrow]
+enabled = true
+verify_jwt = true
+import_map = "./functions/release-escrow/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/release-escrow/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/release-escrow/*.html" ]
+
+[functions.refund-escrow]
+enabled = true
+verify_jwt = true
+import_map = "./functions/refund-escrow/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/refund-escrow/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/refund-escrow/*.html" ]
+
+[functions.confirm-escrow-payment]
+enabled = true
+verify_jwt = true
+import_map = "./functions/confirm-escrow-payment/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/confirm-escrow-payment/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/confirm-escrow-payment/*.html" ]

@@ -1,0 +1,22 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "paths": {
+      "@/*": ["./*"]
+    }
+  },
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    ".expo/types/**/*.ts",
+    "expo-env.d.ts",
+    "nativewind-env.d.ts",
+    "components/dashboard/client/ClientDashboard.jsx",
+    "hooks/useAuth.jsx",
+    "supabase/functions/create-escrow-payment/index.ts",
+    "supabase/functions/refund-escrow/index.ts",
+    "supabase/functions/create_escrow/index.ts",
+    "components/SentryFeedback.jsx"
+  ]
+}
