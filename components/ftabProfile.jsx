@@ -40,7 +40,6 @@ export default function Profile() {
   const [userProfile, setUserProfile] = useState(null);
   const [stripeConnected, setStripeConnected] = useState(false);
   const [stripeAccountId, setStripeAccountId] = useState(null);
-  const [error, setError] = useState(null);
 
   // Define availability labels and colors using theme
   const getAvailabilityColors = () => ({
@@ -76,62 +75,40 @@ export default function Profile() {
   }, [user]);
 
   const fetchProfile = async () => {
-    if (!user) {
-      console.log("❌ No user found in fetchProfile");
-      return;
-    }
-
-    console.log("🔄 Starting fetchProfile for user:", user.id);
+    if (!user) return;
 
     try {
       setLoading(true);
-      setError(null);
 
       // Fetch freelancer profile with error handling
-      console.log("📊 Fetching freelancer profile...");
       const { data: freelancerData, error: freelancerError } =
         await getFreelancerProfile(user.id);
 
-      console.log("📊 Freelancer data:", freelancerData);
-      console.log("📊 Freelancer error:", freelancerError);
-
       if (freelancerError) {
-        console.error("❌ Error fetching freelancer profile:", freelancerError);
-        setError(`Freelancer profile error: ${freelancerError.message}`);
-        // Don't return, try to fetch user profile too
+        console.error("Error fetching freelancer profile:", freelancerError);
+        Alert.alert("Error", "Failed to load freelancer profile");
       } else if (freelancerData) {
-        console.log("✅ Freelancer profile loaded");
         setProfile(freelancerData);
         setStripeAccountId(freelancerData.stripe_account_id);
         setStripeConnected(!!freelancerData.stripe_account_id);
-      } else {
-        console.log("⚠️ No freelancer data returned");
       }
 
       // Fetch user profile with error handling
-      console.log("👤 Fetching user profile...");
       const { data: userData, error: userError } = await getUser(user.id);
 
-      console.log("👤 User data:", userData);
-      console.log("👤 User error:", userError);
-
       if (userError) {
-        console.error("❌ Error fetching user profile:", userError);
-        setError(`User profile error: ${userError.message}`);
+        console.error("Error fetching user profile:", userError);
+        Alert.alert("Error", "Failed to load user profile");
       } else if (userData) {
-        console.log("✅ User profile loaded");
         setUserProfile(userData);
-      } else {
-        console.log("⚠️ No user data returned");
       }
-
-      console.log("✅ fetchProfile completed");
     } catch (error) {
-      console.error("❌ Unexpected error fetching profile:", error);
-      console.error("Error stack:", error.stack);
-      setError(`Unexpected error: ${error.message}`);
+      console.error("Unexpected error fetching profile:", error);
+      Alert.alert(
+        "Error",
+        "An unexpected error occurred while loading your profile. Please try again.",
+      );
     } finally {
-      console.log("🏁 Setting loading to false");
       setLoading(false);
     }
   };
@@ -223,44 +200,10 @@ export default function Profile() {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={theme.primary} />
-        <Text style={styles.loadingText}>
-          {authLoading ? "Authenticating..." : "Loading profile..."}
-        </Text>
-        {error && (
-          <Text
-            style={[styles.loadingText, { color: theme.error, marginTop: 10 }]}
-          >
-            Error: {error}
-          </Text>
-        )}
+        <Text style={styles.loadingText}>Loading profile...</Text>
       </View>
     );
   }
-  // Add error state display
-  if (error && !profile && !userProfile) {
-    return (
-      <View style={styles.loadingContainer}>
-        <Text style={[styles.loadingText, { color: theme.error }]}>
-          Failed to load profile
-        </Text>
-        <Text style={styles.loadingText}>{error}</Text>
-        <TouchableOpacity
-          style={styles.emptyStateButton}
-          onPress={fetchProfile}
-        >
-          <Text style={styles.emptyStateButtonText}>Retry</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-  // Add debug info at the top of the render
-  console.log("🎨 Rendering Profile with:", {
-    profile: profile ? "exists" : "null",
-    userProfile: userProfile ? "exists" : "null",
-    loading,
-    authLoading,
-    error,
-  });
 
   const availabilityColor =
     availabilityColors[profile?.availability] || theme.textMuted;
@@ -270,90 +213,242 @@ export default function Profile() {
   return (
     <ScrollView showsVerticalScrollIndicator={false} style={styles.container}>
       <View style={styles.content}>
-        {/* Wrap everything in error boundary simulation */}
-        {(() => {
-          try {
-            return (
-              <>
-                {/* Header Section */}
-                <View style={styles.header}>
-                  <View style={styles.avatarContainer}>
-                    <View style={styles.avatar}>
-                      <User size={48} color={theme.primary} />
-                    </View>
-                    {stripeConnected && (
-                      <View style={styles.verifiedBadge}>
-                        <CheckCircle size={20} color={theme.success} />
-                      </View>
-                    )}
-                  </View>
-                  <View style={styles.headerInfo}>
-                    <Text style={styles.name}>
-                      {userProfile?.full_name || "Add your name"}
-                    </Text>
-                    <Text style={styles.title}>
-                      {profile?.title || "Add your title"}
-                    </Text>
-                    {userProfile?.location && (
-                      <View style={styles.locationRow}>
-                        <MapPin size={14} color={theme.textSecondary} />
-                        <Text style={styles.location}>
-                          {userProfile.location}
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-                  {/* Comment out edit button temporarily to test */}
-                  {/* <TouchableOpacity
-                  style={styles.editButton}
-                  onPress={() =>
-                    router.push({
-                      pathname: "/(EditProfile)/[id]",
-                      params: { id: user.id },
-                    })
-                  }
-                  activeOpacity={0.8}
-                >
-                  <Edit size={18} color={theme.primary} />
-                </TouchableOpacity> */}
-                </View>
+        {/* Header Section */}
+        <View style={styles.header}>
+          <View style={styles.avatarContainer}>
+            <View style={styles.avatar}>
+              <User size={48} color={theme.primary} />
+            </View>
+            {stripeConnected && (
+              <View style={styles.verifiedBadge}>
+                <CheckCircle size={20} color={theme.success} />
+              </View>
+            )}
+          </View>
+          <View style={styles.headerInfo}>
+            <Text style={styles.name}>
+              {userProfile?.full_name || "Add your name"}
+            </Text>
+            <Text style={styles.title}>
+              {profile?.title || "Add your title"}
+            </Text>
+            {userProfile?.location && (
+              <View style={styles.locationRow}>
+                <MapPin size={14} color={theme.textSecondary} />
+                <Text style={styles.location}>{userProfile.location}</Text>
+              </View>
+            )}
+          </View>
+          <TouchableOpacity
+            style={styles.editButton}
+            onPress={() =>
+              router.push({
+                pathname: "/(EditProfile)/[id]",
+                params: { id: user.id },
+              })
+            }
+            activeOpacity={0.8}
+          >
+            <Edit size={18} color={theme.primary} />
+          </TouchableOpacity>
+        </View>
 
-                {/* Stats Grid - Simplified for testing */}
-                <View style={styles.statsGrid}>
-                  <View style={styles.statCard}>
-                    <View style={styles.statIcon}>
-                      <DollarSign size={20} color={theme.success} />
-                    </View>
-                    <Text style={styles.statValue}>
-                      ${profile?.hourly_rate || "0"}
-                    </Text>
-                    <Text style={styles.statLabel}>Hourly Rate</Text>
-                  </View>
-                </View>
+        {/* Availability Badge */}
+        {profile?.availability && (
+          <View
+            style={[
+              styles.availabilityBadge,
+              { backgroundColor: `${availabilityColor}20` },
+            ]}
+          >
+            <View
+              style={[
+                styles.availabilityDot,
+                { backgroundColor: availabilityColor },
+              ]}
+            />
+            <Text
+              style={[styles.availabilityText, { color: availabilityColor }]}
+            >
+              {availabilityLabel}
+            </Text>
+          </View>
+        )}
 
-                {/* Simple test text */}
-                <Text style={{ color: theme.text, fontSize: 18, padding: 20 }}>
-                  Profile screen is rendering! ✅
-                </Text>
-                <Text style={{ color: theme.textSecondary, padding: 20 }}>
-                  User: {userProfile?.full_name || "No name"}
-                </Text>
-                <Text style={{ color: theme.textSecondary, padding: 20 }}>
-                  Title: {profile?.title || "No title"}
-                </Text>
-              </>
-            );
-          } catch (renderError) {
-            console.error("❌ Render error:", renderError);
-            return (
-              <View style={{ padding: 20 }}>
-                <Text style={{ color: theme.error, fontSize: 16 }}>
-                  Render Error: {renderError.message}
+        {/* Bio */}
+        {userProfile?.bio && (
+          <View style={styles.card}>
+            <Text style={styles.bio}>{userProfile.bio}</Text>
+          </View>
+        )}
+
+        {/* Stats Grid */}
+        <View style={styles.statsGrid}>
+          <View style={styles.statCard}>
+            <View style={styles.statIcon}>
+              <DollarSign size={20} color={theme.success} />
+            </View>
+            <Text style={styles.statValue}>
+              ${profile?.hourly_rate || "0"}/hr
+            </Text>
+            <Text style={styles.statLabel}>Hourly Rate</Text>
+          </View>
+          <View style={styles.statCard}>
+            <View style={styles.statIcon}>
+              <Briefcase size={20} color={theme.primary} />
+            </View>
+            <Text style={styles.statValue}>
+              {profile?.years_experience || "0"}
+            </Text>
+            <Text style={styles.statLabel}>Years Exp.</Text>
+          </View>
+          <View style={styles.statCard}>
+            <View style={styles.statIcon}>
+              <Award size={20} color={theme.warning} />
+            </View>
+            <Text style={styles.statValue}>
+              {profile?.skills?.length || "0"}
+            </Text>
+            <Text style={styles.statLabel}>Skills</Text>
+          </View>
+        </View>
+
+        {/* Stripe Connection Card */}
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <View style={styles.cardHeaderLeft}>
+              <View style={styles.cardIcon}>
+                <Wallet size={20} color={theme.primary} />
+              </View>
+              <View>
+                <Text style={styles.cardTitle}>Payment Account</Text>
+                <Text style={styles.cardDescription}>
+                  {stripeConnected
+                    ? "Connected and ready to receive payments"
+                    : "Connect Stripe to receive payments"}
                 </Text>
               </View>
-            );
-          }
-        })()}
+            </View>
+          </View>
+
+          <View style={styles.cardContent}>
+            {stripeConnected ? (
+              <View style={styles.stripeConnectedContainer}>
+                <View style={styles.stripeConnectedInfo}>
+                  <View style={styles.stripeConnectedBadge}>
+                    <CheckCircle size={16} color={theme.success} />
+                    <Text style={styles.stripeConnectedText}>
+                      Stripe Connected
+                    </Text>
+                  </View>
+                  <Text style={styles.stripeAccountId}>
+                    Account: {stripeAccountId?.slice(-8)}
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.disconnectButton}
+                  onPress={handleDisconnectStripe}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.disconnectButtonText}>Disconnect</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={styles.connectButton}
+                onPress={handleConnectStripe}
+                disabled={connectingStripe}
+                activeOpacity={0.8}
+              >
+                {connectingStripe ? (
+                  <ActivityIndicator size="small" color={theme.surface} />
+                ) : (
+                  <>
+                    <Wallet size={20} color={theme.surface} />
+                    <Text style={styles.connectButtonText}>
+                      Connect Stripe Account
+                    </Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            )}
+            <View style={styles.stripeInfo}>
+              <Text style={styles.stripeInfoText}>
+                💡 Stripe is required to receive payments from clients. Your
+                earnings will be transferred directly to your bank account.
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Skills Section */}
+        {profile?.skills && profile.skills.length > 0 && (
+          <View style={styles.card}>
+            <View style={styles.sectionHeader}>
+              <Star size={18} color={theme.primary} />
+              <Text style={styles.sectionTitle}>Skills</Text>
+            </View>
+            <View style={styles.skillsContainer}>
+              {profile.skills.map((skill, index) => (
+                <View key={index} style={styles.skillBadge}>
+                  <Text style={styles.skillText}>{skill}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {/* Portfolio Section */}
+        {profile?.portfolio_urls && profile.portfolio_urls.length > 0 && (
+          <View style={styles.card}>
+            <View style={styles.sectionHeader}>
+              <LinkIcon size={18} color={theme.primary} />
+              <Text style={styles.sectionTitle}>Portfolio</Text>
+            </View>
+            <View style={styles.portfolioList}>
+              {profile.portfolio_urls.map((url, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={styles.portfolioItem}
+                  onPress={() => Linking.openURL(url)}
+                  activeOpacity={0.7}
+                >
+                  <LinkIcon size={16} color={theme.primary} />
+                  <Text style={styles.portfolioUrl} numberOfLines={1}>
+                    {url}
+                  </Text>
+                  <ExternalLink size={14} color={theme.textMuted} />
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {/* Empty State */}
+        {(!profile?.skills || profile.skills.length === 0) &&
+          (!profile?.portfolio_urls || profile.portfolio_urls.length === 0) && (
+            <View style={styles.emptyState}>
+              <User size={48} color={theme.border} />
+              <Text style={styles.emptyStateTitle}>Complete Your Profile</Text>
+              <Text style={styles.emptyStateDescription}>
+                Add your skills, portfolio links, and connect your Stripe
+                account to start winning projects
+              </Text>
+              <TouchableOpacity
+                style={styles.emptyStateButton}
+                onPress={() =>
+                  router.push({
+                    pathname: "/(EditProfile)/[id]",
+                    params: { id: user.id },
+                  })
+                }
+                activeOpacity={0.8}
+              >
+                <Edit size={18} color={theme.surface} />
+                <Text style={styles.emptyStateButtonText}>Edit Profile</Text>
+              </TouchableOpacity>
+            </View>
+          )}
       </View>
     </ScrollView>
   );
