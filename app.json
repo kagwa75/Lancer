@@ -35,7 +35,6 @@
         {
           "android": {
             "usesCleartextTraffic": true,
-            "networkInspector": true,
             "enableProguardInReleaseBuilds": false,
             "enableShrinkResourcesInReleaseBuilds": false
           }
@@ -53,13 +52,7 @@
       "expo-web-browser",
       "expo-font",
       "expo-secure-store",
-      [
-        "@stripe/stripe-react-native",
-        {
-          "merchantIdentifier": "merchant.com.jameshub.jobs",
-          "enableGooglePay": false
-        }
-      ],
+
       [
         "@sentry/react-native/expo",
         {

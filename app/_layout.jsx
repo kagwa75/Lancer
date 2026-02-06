@@ -25,10 +25,6 @@ Sentry.init({
 
   integrations: [
     Sentry.mobileReplayIntegration(),
-    Sentry.reactNativeTracingIntegration({
-      enableUserInteractionTracing: true,
-      enableNativeFramesTracking: Platform.OS !== "web",
-    }),
     Sentry.feedbackIntegration({
       autoInject: false, // We'll manually control when to show feedback
       showBranding: false, // Remove Sentry branding

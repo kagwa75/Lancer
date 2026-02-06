@@ -573,7 +573,7 @@ export default function ProjectDetails() {
                 <View style={s.messageTextWrapper}>
                   <Text style={s.messageButtonTitle}>Message Freelancer</Text>
                   <Text style={s.messageButtonSubtitle}>
-                    {proposals.find((p) => p.id === transaction.bid_id)
+                    {proposals.find((p) => p.id === transaction?.bid_id)
                       ?.FreelancerProfile?.full_name ||
                       "Chat with your freelancer"}
                   </Text>
