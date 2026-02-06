@@ -18,7 +18,6 @@ import {
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Linking,
   ScrollView,
   StyleSheet,
@@ -26,7 +25,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import api from "../../../lib/api";
+import { useStripeConnection } from "../../../hooks/useStripeConnection";
+
 import { getFreelancerProfile, getUser } from "../../../lib/supabase";
 
 export default function Profile() {
@@ -36,12 +36,18 @@ export default function Profile() {
   const { toast } = useToast();
 
   const [loading, setLoading] = useState(true);
-  const [connectingStripe, setConnectingStripe] = useState(false);
   const [profile, setProfile] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
-  const [stripeConnected, setStripeConnected] = useState(false);
-  const [stripeAccountId, setStripeAccountId] = useState(null);
   const [error, setError] = useState(null);
+  const {
+    connectingStripe,
+    stripeConnected,
+    stripeAccountId,
+    setStripeConnected,
+    setStripeAccountId,
+    handleConnectStripe,
+    handleDisconnectStripe,
+  } = useStripeConnection({ user, fetchProfile });
 
   // Define availability labels and colors using theme
   const getAvailabilityColors = () => ({
@@ -137,7 +143,7 @@ export default function Profile() {
     }
   };
 
-  const handleConnectStripe = async () => {
+  /*const handleConnectStripe = async () => {
     setConnectingStripe(true);
 
     try {
@@ -208,7 +214,7 @@ export default function Profile() {
         },
       ],
     );
-  };
+  };*/
 
   const styles = createStyles(theme);
   const availabilityColors = getAvailabilityColors();
