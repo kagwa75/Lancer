@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "lancer",
-    "slug": "jobs",
+    "slug": "lancer",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/lancer.png",
@@ -22,7 +22,11 @@
       },
       "edgeToEdgeEnabled": true,
       "package": "com.jameshub.jobs",
-      "permissions": ["INTERNET", "ACCESS_NETWORK_STATE", "ACCESS_WIFI_STATE"]
+      "permissions": [
+        "INTERNET",
+        "ACCESS_NETWORK_STATE",
+        "ACCESS_WIFI_STATE"
+      ]
     },
     "web": {
       "output": "static",
@@ -36,7 +40,8 @@
           "android": {
             "usesCleartextTraffic": true,
             "enableProguardInReleaseBuilds": false,
-            "enableShrinkResourcesInReleaseBuilds": false
+            "enableShrinkResourcesInReleaseBuilds": false,
+            "enableMinifyInReleaseBuilds": false
           }
         }
       ],
@@ -52,7 +57,6 @@
       "expo-web-browser",
       "expo-font",
       "expo-secure-store",
-
       [
         "@sentry/react-native/expo",
         {
@@ -72,7 +76,7 @@
       "stripePublishableKey": "pk_test_51SricTAKaiR3hK9GiZ4f0N0EiuN3yijWRAj80HsSHnKSivm1BLXj7YuHO2C97e0wdWRDk5GVTEs4Xx0PV8CKy5LG00D17tBT3r",
       "router": {},
       "eas": {
-        "projectId": "d7983c1e-a9e5-4a7d-b1a8-5489571c2aca"
+        "projectId": "95dccba2-5f0e-4da6-9f57-33a7908a1e70"
       }
     },
     "runtimeVersion": {
@@ -80,6 +84,7 @@
     },
     "updates": {
       "url": "https://u.expo.dev/d7983c1e-a9e5-4a7d-b1a8-5489571c2aca"
-    }
+    },
+    "owner": "kagwa75s-organization"
   }
 }
