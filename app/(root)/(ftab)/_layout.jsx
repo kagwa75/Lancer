@@ -30,11 +30,6 @@ export default function TabLayout() {
       icon: { focused: "chatbubble", outline: "chatbubble-outline" },
       badgeCount: 5, // Example: Unread messages count
     },
-    {
-      name: "profile",
-      title: "Profile",
-      icon: { focused: "person", outline: "person-outline" },
-    },
   ];
 
   return (

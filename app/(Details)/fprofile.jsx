@@ -26,29 +26,23 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useStripeConnection } from "../../../hooks/useStripeConnection";
 
-import { getFreelancerProfile, getUser } from "../../../lib/supabase";
+import { getFreelancerProfile, getUser } from "../../lib/supabase";
 
 export default function Profile() {
-  const { theme, isDark } = useTheme();
+  const { theme } = useTheme();
   const { user, userRole, loading: authLoading } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
 
   const [loading, setLoading] = useState(true);
+  const [connectingStripe, setConnectingStripe] = useState(false);
   const [profile, setProfile] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
+  const [stripeConnected, setStripeConnected] = useState(false);
+  const [stripeAccountId, setStripeAccountId] = useState(null);
+
   const [error, setError] = useState(null);
-  const {
-    connectingStripe,
-    stripeConnected,
-    stripeAccountId,
-    setStripeConnected,
-    setStripeAccountId,
-    handleConnectStripe,
-    handleDisconnectStripe,
-  } = useStripeConnection({ user, fetchProfile });
 
   // Define availability labels and colors using theme
   const getAvailabilityColors = () => ({
@@ -144,7 +138,7 @@ export default function Profile() {
     }
   }
 
-  /*const handleConnectStripe = async () => {
+  /* const handleConnectStripe = async () => {
     setConnectingStripe(true);
 
     try {

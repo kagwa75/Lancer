@@ -257,7 +257,7 @@ export default function FreelancerDashboard() {
               style={styles.menuItem}
               onPress={() => {
                 setModalVisible(false);
-                router.push("/profile");
+                router.push("/(Details)/fprofile");
               }}
             >
               <User size={20} color={theme.text} />

@@ -72,9 +72,13 @@ const Layout = () => {
       >
         <AuthProvider>
           <ThemeProvider>
-            <StripeProviderComponent publishableKey={stripePublishableKey}>
+            {stripePublishableKey ? (
+              <StripeProviderComponent publishableKey={stripePublishableKey}>
+                <RootLayout />
+              </StripeProviderComponent>
+            ) : (
               <RootLayout />
-            </StripeProviderComponent>
+            )}
           </ThemeProvider>
         </AuthProvider>
       </PostHogProvider>
