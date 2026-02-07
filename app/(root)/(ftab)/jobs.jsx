@@ -240,7 +240,7 @@ export default function FindWork() {
                 style={styles.projectCard}
                 onPress={() =>
                   router.push({
-                    pathname: "/(Details)/[id]",
+                    pathname: "/(description)/[id]",
                     params: { id: project.id },
                   })
                 }

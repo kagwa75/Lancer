@@ -207,7 +207,7 @@ export default function FreelancerDashboard() {
               <Pressable
                 key={p.id}
                 style={styles.proposalItem}
-                onPress={() => router.push(`/(Details)/${p.project.id}`)}
+                onPress={() => router.push(`/(description)/${p.project.id}`)}
               >
                 <View>
                   <Text style={styles.bold}>{p.project.title}</Text>
