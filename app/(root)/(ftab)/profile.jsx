@@ -18,6 +18,7 @@ import {
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Linking,
   ScrollView,
   StyleSheet,
@@ -405,7 +406,9 @@ export default function Profile() {
                 </View>
                 <TouchableOpacity
                   style={styles.disconnectButton}
-                  onPress={handleDisconnectStripe}
+                  onPress={() =>
+                    Alert.alert("This feature will be available soon")
+                  }
                   activeOpacity={0.8}
                 >
                   <Text style={styles.disconnectButtonText}>Disconnect</Text>
@@ -415,7 +418,6 @@ export default function Profile() {
               <TouchableOpacity
                 style={styles.connectButton}
                 onPress={handleConnectStripe}
-                disabled={connectingStripe}
                 activeOpacity={0.8}
               >
                 {connectingStripe ? (
