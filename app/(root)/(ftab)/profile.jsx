@@ -83,7 +83,7 @@ export default function Profile() {
     }
   }, [user, authLoading, userRole]);
 
-  const fetchProfile = async () => {
+  async function fetchProfile() {
     if (!user) {
       console.log("❌ No user found in fetchProfile");
       return;
@@ -142,7 +142,7 @@ export default function Profile() {
       console.log("🏁 Setting loading to false");
       setLoading(false);
     }
-  };
+  }
 
   /*const handleConnectStripe = async () => {
     setConnectingStripe(true);
@@ -417,7 +417,9 @@ export default function Profile() {
             ) : (
               <TouchableOpacity
                 style={styles.connectButton}
-                onPress={handleConnectStripe}
+                onPress={() =>
+                  Alert.alert("This feature will be available soon")
+                }
                 activeOpacity={0.8}
               >
                 {connectingStripe ? (
