@@ -27,6 +27,7 @@ import {
   View,
 } from "react-native";
 
+import api from "../../lib/api";
 import { getFreelancerProfile, getUser } from "../../lib/supabase";
 
 export default function Profile() {
@@ -409,7 +410,7 @@ export default function Profile() {
             ) : (
               <TouchableOpacity
                 style={styles.connectButton}
-                onPress={handleDisconnectStripe}
+                onPress={handleConnectStripe}
                 activeOpacity={0.8}
               >
                 {connectingStripe ? (

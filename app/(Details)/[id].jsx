@@ -315,7 +315,14 @@ export default function ProjectDetails() {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ paymentIntentId: paymentIntentId }),
+          body: JSON.stringify({
+            paymentIntentId: paymentIntentId,
+            projectId: id,
+            bidId: selectedProposal.id,
+            clientId: user.id,
+            freelancerId: selectedProposal.freelancer_id,
+            amount: amount,
+          }),
         },
       );
 
