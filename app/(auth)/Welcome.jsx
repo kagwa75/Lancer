@@ -18,38 +18,88 @@ import {
   Video,
 } from "lucide-react-native";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import "../../global.css";
 
 const categories = [
-  { name: "Web Development", icon: Globe, count: "2,340", bgColor: "#EFF6FF", iconColor: "#2563EB" },
-  { name: "Mobile Development", icon: Smartphone, count: "1,120", bgColor: "#F5F3FF", iconColor: "#9333EA" },
-  { name: "Design & Creative", icon: Palette, count: "1,890", bgColor: "#FDF2F8", iconColor: "#EC4899" },
-  { name: "Writing & Content", icon: FileText, count: "980", bgColor: "#FEF3C7", iconColor: "#F59E0B" },
-  { name: "Marketing", icon: Megaphone, count: "750", bgColor: "#DCFCE7", iconColor: "#16A34A" },
-  { name: "Video & Animation", icon: Video, count: "620", bgColor: "#FEE2E2", iconColor: "#DC2626" },
-  { name: "Data & Analytics", icon: BarChart, count: "430", bgColor: "#E0E7FF", iconColor: "#4F46E5" },
-  { name: "AI & Machine Learning", icon: Brain, count: "310", bgColor: "#CFFAFE", iconColor: "#0891B2" },
+  {
+    name: "Web Development",
+    icon: Globe,
+    count: "2,340",
+    bgColor: "#EFF6FF",
+    iconColor: "#2563EB",
+  },
+  {
+    name: "Mobile Development",
+    icon: Smartphone,
+    count: "1,120",
+    bgColor: "#F5F3FF",
+    iconColor: "#9333EA",
+  },
+  {
+    name: "Design & Creative",
+    icon: Palette,
+    count: "1,890",
+    bgColor: "#FDF2F8",
+    iconColor: "#EC4899",
+  },
+  {
+    name: "Writing & Content",
+    icon: FileText,
+    count: "980",
+    bgColor: "#FEF3C7",
+    iconColor: "#F59E0B",
+  },
+  {
+    name: "Marketing",
+    icon: Megaphone,
+    count: "750",
+    bgColor: "#DCFCE7",
+    iconColor: "#16A34A",
+  },
+  {
+    name: "Video & Animation",
+    icon: Video,
+    count: "620",
+    bgColor: "#FEE2E2",
+    iconColor: "#DC2626",
+  },
+  {
+    name: "Data & Analytics",
+    icon: BarChart,
+    count: "430",
+    bgColor: "#E0E7FF",
+    iconColor: "#4F46E5",
+  },
+  {
+    name: "AI & Machine Learning",
+    icon: Brain,
+    count: "310",
+    bgColor: "#CFFAFE",
+    iconColor: "#0891B2",
+  },
 ];
 
 const features = [
   {
     icon: Users,
     title: "Top Talent",
-    description: "Access a global network of skilled freelancers ready to bring your projects to life.",
+    description:
+      "Access a global network of skilled freelancers ready to bring your projects to life.",
     stat: "50K+",
     statLabel: "Freelancers",
   },
   {
     icon: Shield,
     title: "Secure Payments",
-    description: "Your money is safe with our escrow system. Pay only when you're satisfied.",
+    description:
+      "Your money is safe with our escrow system. Pay only when you're satisfied.",
     stat: "100%",
     statLabel: "Protected",
   },
   {
     icon: Star,
     title: "Quality Work",
-    description: "Our rating system ensures you work with the best. Check reviews before hiring.",
+    description:
+      "Our rating system ensures you work with the best. Check reviews before hiring.",
     stat: "4.9/5",
     statLabel: "Avg Rating",
   },
@@ -111,7 +161,7 @@ export default function Welcome() {
 
         <View style={styles.heroCTAs}>
           <Pressable
-             onPress={() => router.push("/login")}
+            onPress={() => router.push("/login")}
             style={styles.primaryButton}
           >
             <Text style={styles.primaryButtonText}>Find Freelancers</Text>
@@ -156,7 +206,7 @@ export default function Welcome() {
             return (
               <Pressable
                 key={category.name}
-                 onPress={() => router.push("/login")}
+                onPress={() => router.push("/login")}
                 style={styles.categoryCard}
               >
                 <View
@@ -168,7 +218,9 @@ export default function Welcome() {
                   <Icon size={28} color={category.iconColor} />
                 </View>
                 <Text style={styles.categoryName}>{category.name}</Text>
-                <Text style={styles.categoryCount}>{category.count} experts</Text>
+                <Text style={styles.categoryCount}>
+                  {category.count} experts
+                </Text>
               </Pressable>
             );
           })}
@@ -225,14 +277,14 @@ export default function Welcome() {
 
         <View style={styles.ctaButtons}>
           <Pressable
-           onPress={() => router.push("/login")}
+            onPress={() => router.push("/login")}
             style={styles.ctaPrimaryButton}
           >
             <Text style={styles.ctaPrimaryButtonText}>Post a Project</Text>
           </Pressable>
 
           <Pressable
-         onPress={() => router.push("/login")}
+            onPress={() => router.push("/login")}
             style={styles.ctaSecondaryButton}
           >
             <Text style={styles.ctaSecondaryButtonText}>Find Work</Text>
@@ -249,7 +301,9 @@ export default function Welcome() {
           <Text style={styles.footerLogoText}>FreelanceHub</Text>
         </View>
 
-        <Text style={styles.footerTagline}>Connecting talent with opportunity</Text>
+        <Text style={styles.footerTagline}>
+          Connecting talent with opportunity
+        </Text>
         <Text style={styles.footerCopyright}>
           © {new Date().getFullYear()} FreelanceHub. All rights reserved.
         </Text>
@@ -263,7 +317,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#FFFFFF",
   },
-  
+
   // Header
   header: {
     backgroundColor: "#FFFFFF",
@@ -314,7 +368,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     fontSize: 16,
   },
-  
+
   // Hero
   hero: {
     paddingHorizontal: 24,
@@ -410,7 +464,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#6B7280",
   },
-  
+
   // Categories
   categoriesSection: {
     paddingHorizontal: 16,
@@ -464,7 +518,7 @@ const styles = StyleSheet.create({
     color: "#6B7280",
     fontWeight: "500",
   },
-  
+
   // Features
   featuresSection: {
     paddingHorizontal: 24,
@@ -521,7 +575,7 @@ const styles = StyleSheet.create({
     fontWeight: "400",
     fontSize: 14,
   },
-  
+
   // CTA
   ctaSection: {
     backgroundColor: "#2563EB",
@@ -585,7 +639,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: "#FFFFFF",
   },
-  
+
   // Footer
   footer: {
     backgroundColor: "#111827",
