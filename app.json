@@ -25,6 +25,9 @@
       "permissions": [
         "INTERNET",
         "ACCESS_NETWORK_STATE",
+        "ACCESS_WIFI_STATE",
+        "INTERNET",
+        "ACCESS_NETWORK_STATE",
         "ACCESS_WIFI_STATE"
       ]
     },
@@ -83,7 +86,7 @@
       "policy": "appVersion"
     },
     "updates": {
-      "url": "https://u.expo.dev/d7983c1e-a9e5-4a7d-b1a8-5489571c2aca"
+      "url": "https://u.expo.dev/95dccba2-5f0e-4da6-9f57-33a7908a1e70"
     },
     "owner": "kagwa75s-organization"
   }

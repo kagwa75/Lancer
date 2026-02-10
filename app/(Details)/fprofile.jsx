@@ -138,7 +138,7 @@ export default function Profile() {
     }
   }
 
-  /* const handleConnectStripe = async () => {
+  const handleConnectStripe = async () => {
     setConnectingStripe(true);
 
     try {
@@ -209,7 +209,7 @@ export default function Profile() {
         },
       ],
     );
-  };*/
+  };
 
   const styles = createStyles(theme);
   const availabilityColors = getAvailabilityColors();
@@ -400,9 +400,7 @@ export default function Profile() {
                 </View>
                 <TouchableOpacity
                   style={styles.disconnectButton}
-                  onPress={() =>
-                    Alert.alert("This feature will be available soon")
-                  }
+                  onPress={handleDisconnectStripe}
                   activeOpacity={0.8}
                 >
                   <Text style={styles.disconnectButtonText}>Disconnect</Text>
@@ -411,9 +409,7 @@ export default function Profile() {
             ) : (
               <TouchableOpacity
                 style={styles.connectButton}
-                onPress={() =>
-                  Alert.alert("This feature will be available soon")
-                }
+                onPress={handleDisconnectStripe}
                 activeOpacity={0.8}
               >
                 {connectingStripe ? (
