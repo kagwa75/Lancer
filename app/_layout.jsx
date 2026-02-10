@@ -1,4 +1,5 @@
 import * as Sentry from "@sentry/react-native";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { router, Stack } from "expo-router";
 import { PostHogProvider } from "posthog-react-native";
 import { useEffect } from "react";
@@ -59,29 +60,34 @@ if (Platform.OS !== "web") {
   StripeProviderComponent = ({ children }) => <>{children}</>;
 }
 
+const queryClient = new QueryClient();
+
 const Layout = () => {
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <PostHogProvider
-        apiKey="phc_GfkmKQGQv3EJLiWHWn0vKpOgYnRsByeeDnpWEmSv6YV"
-        options={{
-          host: "https://us.i.posthog.com",
-          enableSessionReplay: true,
-        }}
-        autocapture
-      >
-        <AuthProvider>
-          <ThemeProvider>
-            {stripePublishableKey ? (
-              <StripeProviderComponent publishableKey={stripePublishableKey}>
+      <QueryClientProvider client={queryClient}>
+        <PostHogProvider
+          apiKey="phc_GfkmKQGQv3EJLiWHWn0vKpOgYnRsByeeDnpWEmSv6YV"
+          options={{
+            host: "https://us.i.posthog.com",
+            enableSessionReplay: true,
+          }}
+          autocapture
+        >
+          <AuthProvider>
+            <ThemeProvider>
+              {stripePublishableKey ? (
+                <StripeProviderComponent publishableKey={stripePublishableKey}>
+                  <RootLayout />
+                </StripeProviderComponent>
+              ) : (
                 <RootLayout />
-              </StripeProviderComponent>
-            ) : (
-              <RootLayout />
-            )}
-          </ThemeProvider>
-        </AuthProvider>
-      </PostHogProvider>
+              )}
+            </ThemeProvider>
+          </AuthProvider>
+        </PostHogProvider>
+      </QueryClientProvider>
     </GestureHandlerRootView>
   );
 };

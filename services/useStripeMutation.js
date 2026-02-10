@@ -5,11 +5,13 @@ export const useStripeConnect = (user) => {
   const queryClient = useQueryClient();
 
   const connectMutation = useMutation({
-    mutationFn: () => stripeApi.connectAccount(user),
-    onSuccess: (data) => {
+    mutationFn: async () => {
+      const response = await stripeApi.connectAccount(user);
+      return response?.data?.accountLink || null;
+    },
+    onSuccess: () => {
       // Invalidate relevant queries if needed
       queryClient.invalidateQueries({ queryKey: ["stripe-status"] });
-      return data.data.accountLink;
     },
   });
 
