@@ -26,9 +26,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-
-import api from "../../lib/api";
 import { getFreelancerProfile, getUser } from "../../lib/supabase";
+import { useStripeConnect } from "../../services/useStripeMutation";
 
 export default function Profile() {
   const { theme } = useTheme();
@@ -37,13 +36,21 @@ export default function Profile() {
   const { toast } = useToast();
 
   const [loading, setLoading] = useState(true);
-  const [connectingStripe, setConnectingStripe] = useState(false);
   const [profile, setProfile] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
   const [stripeConnected, setStripeConnected] = useState(false);
   const [stripeAccountId, setStripeAccountId] = useState(null);
-
   const [error, setError] = useState(null);
+
+  // Use React Query mutation hook
+  const {
+    connectAccount,
+    disconnectAccount,
+    isConnecting,
+    isDisconnecting,
+    connectError,
+    disconnectError,
+  } = useStripeConnect(user);
 
   // Define availability labels and colors using theme
   const getAvailabilityColors = () => ({
@@ -77,6 +84,27 @@ export default function Profile() {
       fetchProfile();
     }
   }, [user, authLoading, userRole]);
+
+  useEffect(() => {
+    // Show connection error if any
+    if (connectError) {
+      Alert.alert(
+        "Connection Failed",
+        connectError.userMessage ||
+          "Failed to connect Stripe account. Please try again.",
+      );
+    }
+  }, [connectError]);
+
+  useEffect(() => {
+    // Show disconnection error if any
+    if (disconnectError) {
+      Alert.alert(
+        "Error",
+        disconnectError.userMessage || "Failed to disconnect Stripe account",
+      );
+    }
+  }, [disconnectError]);
 
   async function fetchProfile() {
     if (!user) {
@@ -140,37 +168,26 @@ export default function Profile() {
   }
 
   const handleConnectStripe = async () => {
-    setConnectingStripe(true);
-
     try {
       console.log("🔐 Connecting Stripe for user:", user.id);
 
-      const response = await api.post("/stripe/connect-account", {
-        userId: user.id,
-        email: user.email,
-        refreshUrl: `${api.defaults.baseURL}/stripe/refresh?userId=${user.id}`,
-        returnUrl: `${api.defaults.baseURL}/stripe/success?userId=${user.id}`,
-      });
+      const accountLink = await connectAccount();
 
-      const { accountLink } = response.data;
-      console.log("✅ Account link received");
+      console.log("✅ Account link received:", accountLink);
 
-      await Linking.openURL(accountLink.url);
+      if (accountLink && accountLink.url) {
+        await Linking.openURL(accountLink.url);
 
-      toast({
-        title: "Redirecting to Stripe",
-        description: "Complete the onboarding to receive payments",
-      });
+        toast({
+          title: "Redirecting to Stripe",
+          description: "Complete the onboarding to receive payments",
+        });
+      } else {
+        throw new Error("No account link received");
+      }
     } catch (error) {
       console.error("❌ Stripe connect error:", error);
-
-      Alert.alert(
-        "Connection Failed",
-        error.userMessage ||
-          "Failed to connect Stripe account. Please try again.",
-      );
-    } finally {
-      setConnectingStripe(false);
+      // Error is already handled by the useEffect listening to connectError
     }
   };
 
@@ -185,11 +202,9 @@ export default function Profile() {
           style: "destructive",
           onPress: async () => {
             try {
-              await api.post("/stripe/disconnect-account", {
-                userId: user.id,
-                stripeAccountId: stripeAccountId,
-              });
+              await disconnectAccount({ stripeAccountId });
 
+              // Update local state
               setStripeConnected(false);
               setStripeAccountId(null);
 
@@ -198,13 +213,11 @@ export default function Profile() {
                 description: "Your Stripe account has been disconnected",
               });
 
+              // Refresh profile data
               fetchProfile();
             } catch (error) {
               console.error("❌ Disconnect error:", error);
-              Alert.alert(
-                "Error",
-                error.userMessage || "Failed to disconnect Stripe account",
-              );
+              // Error is already handled by the useEffect listening to disconnectError
             }
           },
         },
@@ -233,6 +246,7 @@ export default function Profile() {
       </View>
     );
   }
+
   // Add error state display
   if (error && !profile && !userProfile) {
     return (
@@ -250,6 +264,7 @@ export default function Profile() {
       </View>
     );
   }
+
   // Add debug info at the top of the render
   console.log("🎨 Rendering Profile with:", {
     profile: profile ? "exists" : "null",
@@ -257,6 +272,8 @@ export default function Profile() {
     loading,
     authLoading,
     error,
+    stripeConnected,
+    stripeAccountId,
   });
 
   const availabilityColor =
@@ -400,20 +417,35 @@ export default function Profile() {
                   </Text>
                 </View>
                 <TouchableOpacity
-                  style={styles.disconnectButton}
+                  style={[
+                    styles.disconnectButton,
+                    isDisconnecting && styles.buttonDisabled,
+                  ]}
                   onPress={handleDisconnectStripe}
                   activeOpacity={0.8}
+                  disabled={isDisconnecting}
                 >
-                  <Text style={styles.disconnectButtonText}>Disconnect</Text>
+                  {isDisconnecting ? (
+                    <ActivityIndicator
+                      size="small"
+                      color={theme.textSecondary}
+                    />
+                  ) : (
+                    <Text style={styles.disconnectButtonText}>Disconnect</Text>
+                  )}
                 </TouchableOpacity>
               </View>
             ) : (
               <TouchableOpacity
-                style={styles.connectButton}
+                style={[
+                  styles.connectButton,
+                  isConnecting && styles.buttonDisabled,
+                ]}
                 onPress={handleConnectStripe}
                 activeOpacity={0.8}
+                disabled={isConnecting}
               >
-                {connectingStripe ? (
+                {isConnecting ? (
                   <ActivityIndicator size="small" color={theme.surface} />
                 ) : (
                   <>
@@ -748,6 +780,9 @@ const createStyles = (theme) =>
       color: theme.surface,
       fontSize: 15,
       fontWeight: "600",
+    },
+    buttonDisabled: {
+      opacity: 0.7,
     },
     stripeInfo: {
       backgroundColor: theme.infoBg,
