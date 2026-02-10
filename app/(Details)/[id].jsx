@@ -2,7 +2,6 @@ import { useTheme } from "@/hooks/ThemeContext";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { Feather } from "@expo/vector-icons";
-import { useStripe } from "@stripe/stripe-react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   ArrowLeft,
@@ -22,6 +21,7 @@ import {
   Alert,
   Image,
   Modal,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -44,6 +44,11 @@ export default function ProjectDetails() {
   const { theme, isDark } = useTheme();
   const router = useRouter();
   const { toast } = useToast();
+  const stripeImport =
+    Platform.OS === "web"
+      ? require("@/lib/stripe-mock")
+      : require("@stripe/stripe-react-native");
+  const { useStripe } = stripeImport;
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
 
   const [project, setProject] = useState(null);
