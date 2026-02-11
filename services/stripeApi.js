@@ -1,5 +1,3 @@
-import api from "../lib/api";
-
 export const stripeApi = {
   connectAccount: (user) =>
     api.post("/stripe/connect-account", {

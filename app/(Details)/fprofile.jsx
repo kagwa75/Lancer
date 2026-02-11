@@ -1,6 +1,7 @@
 import { useTheme } from "@/hooks/ThemeContext";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import * as Sentry from "@sentry/react-native";
 import { useRouter } from "expo-router";
 import {
   Award,
@@ -186,6 +187,13 @@ export default function Profile() {
         throw new Error("No account link received");
       }
     } catch (error) {
+      Sentry.captureException(error, {
+        extra: {
+          userId: user?.id,
+          email: user?.email,
+          function: "handleConnectStripe",
+        },
+      });
       console.error("❌ Stripe connect error:", error);
       // Error is already handled by the useEffect listening to connectError
     }
@@ -216,6 +224,13 @@ export default function Profile() {
               // Refresh profile data
               fetchProfile();
             } catch (error) {
+              Sentry.captureException(error, {
+                extra: {
+                  userId: user?.id,
+                  email: user?.email,
+                  function: "handleDisconnectStripe",
+                },
+              });
               console.error("❌ Disconnect error:", error);
               // Error is already handled by the useEffect listening to disconnectError
             }

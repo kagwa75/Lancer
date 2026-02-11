@@ -1,13 +1,13 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { stripeApi } from "../services/stripeApi";
+import { stripeClient } from "./stripeApiClient";
 
 export const useStripeConnect = (user) => {
   const queryClient = useQueryClient();
 
   const connectMutation = useMutation({
     mutationFn: async () => {
-      const response = await stripeApi.connectAccount(user);
-      return response?.data?.accountLink || null;
+      const data = await stripeClient.connectAccount(user);
+      return data?.accountLink || null;
     },
     onSuccess: () => {
       // Invalidate relevant queries if needed
@@ -17,7 +17,7 @@ export const useStripeConnect = (user) => {
 
   const disconnectMutation = useMutation({
     mutationFn: ({ stripeAccountId }) =>
-      stripeApi.disconnectAccount(user.id, stripeAccountId),
+      stripeClient.disconnectAccount(user.id, stripeAccountId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["stripe-status"] });
     },
