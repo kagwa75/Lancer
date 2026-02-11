@@ -118,7 +118,7 @@ export default function FreelancerDashboard() {
         {/* Header */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.title}>Freelancer Dashboard</Text>
+            <Text style={styles.title}>Freelan Dashboard</Text>
             <Text style={styles.subtitle}>Find work and grow your career</Text>
           </View>
           <Pressable
