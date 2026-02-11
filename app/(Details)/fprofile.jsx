@@ -28,7 +28,73 @@ import {
   View,
 } from "react-native";
 import { getFreelancerProfile, getUser } from "../../lib/supabase";
-import { useStripeConnect } from "../../services/useStripeMutation";
+
+const STRIPE_BASE_URL =
+  "https://jargonistic-meadow-heliographically.ngrok-free.dev";
+const STRIPE_TIMEOUT_MS = 30000;
+const STRIPE_HEADERS = {
+  "Content-Type": "application/json",
+  "ngrok-skip-browser-warning": "true",
+};
+
+const normalizeStripeError = (error) => {
+  const normalized =
+    error instanceof Error ? error : new Error("An unexpected error occurred");
+  if (normalized.userMessage) {
+    return normalized;
+  }
+  let message = normalized.message || "An unexpected error occurred";
+  if (normalized.name === "AbortError") {
+    message = "Request timeout. Please try again.";
+  } else if (
+    message.includes("Network request failed") ||
+    message.includes("Failed to fetch")
+  ) {
+    message = "Network error. Please check your internet connection.";
+  }
+  normalized.userMessage = message;
+  return normalized;
+};
+
+const fetchStripeJson = async (url, options) => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), STRIPE_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+      headers: {
+        ...STRIPE_HEADERS,
+        ...(options?.headers || {}),
+      },
+    });
+
+    let data = null;
+    try {
+      data = await response.json();
+    } catch {
+      data = null;
+    }
+
+    if (!response.ok) {
+      const message =
+        data?.error ||
+        data?.message ||
+        `Server error: ${response.status}`;
+      const error = new Error(message);
+      error.userMessage = message;
+      error.status = response.status;
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    throw normalizeStripeError(error);
+  } finally {
+    clearTimeout(timeoutId);
+  }
+};
 
 export default function Profile() {
   const { theme } = useTheme();
@@ -42,16 +108,57 @@ export default function Profile() {
   const [stripeConnected, setStripeConnected] = useState(false);
   const [stripeAccountId, setStripeAccountId] = useState(null);
   const [error, setError] = useState(null);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [isDisconnecting, setIsDisconnecting] = useState(false);
+  const [connectError, setConnectError] = useState(null);
+  const [disconnectError, setDisconnectError] = useState(null);
 
-  // Use React Query mutation hook
-  const {
-    connectAccount,
-    disconnectAccount,
-    isConnecting,
-    isDisconnecting,
-    connectError,
-    disconnectError,
-  } = useStripeConnect(user);
+  const connectAccount = async () => {
+    if (!user) {
+      const userError = new Error("User not available");
+      userError.userMessage = "Please sign in to connect Stripe.";
+      throw userError;
+    }
+
+    const payload = {
+      userId: user.id,
+      email: user.email,
+      refreshUrl: `${STRIPE_BASE_URL}/stripe/refresh?userId=${user.id}`,
+      returnUrl: `${STRIPE_BASE_URL}/stripe/success?userId=${user.id}`,
+    };
+
+    const data = await fetchStripeJson(
+      `${STRIPE_BASE_URL}/stripe/connect-account`,
+      {
+        method: "POST",
+        body: JSON.stringify(payload),
+      },
+    );
+
+    return data?.accountLink || null;
+  };
+
+  const disconnectAccount = async (accountId) => {
+    if (!user) {
+      const userError = new Error("User not available");
+      userError.userMessage = "Please sign in to disconnect Stripe.";
+      throw userError;
+    }
+
+    if (!accountId) {
+      const accountError = new Error("Stripe account ID missing");
+      accountError.userMessage = "Stripe account not found.";
+      throw accountError;
+    }
+
+    return fetchStripeJson(`${STRIPE_BASE_URL}/stripe/disconnect-account`, {
+      method: "POST",
+      body: JSON.stringify({
+        userId: user.id,
+        stripeAccountId: accountId,
+      }),
+    });
+  };
 
   // Define availability labels and colors using theme
   const getAvailabilityColors = () => ({
@@ -169,6 +276,8 @@ export default function Profile() {
   }
 
   const handleConnectStripe = async () => {
+    setIsConnecting(true);
+    setConnectError(null);
     try {
       console.log("🔐 Connecting Stripe for user:", user.id);
 
@@ -184,9 +293,14 @@ export default function Profile() {
           description: "Complete the onboarding to receive payments",
         });
       } else {
-        throw new Error("No account link received");
+        const linkError = new Error("No account link received");
+        linkError.userMessage =
+          "Failed to connect Stripe account. Please try again.";
+        throw linkError;
       }
     } catch (error) {
+      const normalizedError = normalizeStripeError(error);
+      setConnectError(normalizedError);
       Sentry.captureException(error, {
         extra: {
           userId: user?.id,
@@ -196,6 +310,8 @@ export default function Profile() {
       });
       console.error("❌ Stripe connect error:", error);
       // Error is already handled by the useEffect listening to connectError
+    } finally {
+      setIsConnecting(false);
     }
   };
 
@@ -209,8 +325,10 @@ export default function Profile() {
           text: "Disconnect",
           style: "destructive",
           onPress: async () => {
+            setIsDisconnecting(true);
+            setDisconnectError(null);
             try {
-              await disconnectAccount({ stripeAccountId });
+              await disconnectAccount(stripeAccountId);
 
               // Update local state
               setStripeConnected(false);
@@ -224,6 +342,8 @@ export default function Profile() {
               // Refresh profile data
               fetchProfile();
             } catch (error) {
+              const normalizedError = normalizeStripeError(error);
+              setDisconnectError(normalizedError);
               Sentry.captureException(error, {
                 extra: {
                   userId: user?.id,
@@ -233,6 +353,8 @@ export default function Profile() {
               });
               console.error("❌ Disconnect error:", error);
               // Error is already handled by the useEffect listening to disconnectError
+            } finally {
+              setIsDisconnecting(false);
             }
           },
         },
