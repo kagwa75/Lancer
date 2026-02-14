@@ -88,7 +88,7 @@ const ChatRoom = () => {
     try {
       const result = await getUser(id);
       if (result) {
-        setUser(result[0]);
+        setUser(result.data);
       } else {
         Alert.alert("Failed to fetch user details");
       }

@@ -3,6 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Link, router } from "expo-router";
 import {
   ArrowRight,
+  Bell,
   Briefcase,
   Clock,
   DollarSign,
@@ -42,11 +43,38 @@ export default function ClientDashboard() {
     activeProjects: 0,
     totalProposals: 0,
   });
+  const [notificationCount, setNotificationCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const posthog = usePostHog();
   useEffect(() => {
     if (user) fetchDashboardData();
   }, [user]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    fetchNotificationCount();
+
+    const subscription = supabase
+      .channel("client-notification-changes")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "notifications",
+          filter: `receiveid.eq.${user.id}`,
+        },
+        () => {
+          setNotificationCount((prev) => prev + 1);
+        },
+      )
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [user?.id]);
 
   const fetchDashboardData = async () => {
     if (!user) return;
@@ -84,6 +112,23 @@ export default function ClientDashboard() {
       setLoading(false);
     } catch (error) {
       console.error(error);
+    }
+  };
+
+  const fetchNotificationCount = async () => {
+    if (!user?.id) return;
+    try {
+      const { count, error } = await supabase
+        .from("notifications")
+        .select("id", { count: "exact", head: true })
+        .eq("receiveid", user.id);
+
+      if (error) throw error;
+      if (typeof count === "number") {
+        setNotificationCount(count);
+      }
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
     }
   };
 
@@ -134,13 +179,29 @@ export default function ClientDashboard() {
             </Text>
           </View>
 
-          <Pressable
-            onPress={() => router.push(`/(Details)/NewProject`)}
-            style={styles.postButton}
-          >
-            <PlusCircle size={18} color={theme.surface} />
-            <Text style={styles.postButtonText}>Post Project</Text>
-          </Pressable>
+          <View style={styles.headerActions}>
+            <Pressable
+              onPress={() => router.push("/notifications")}
+              style={styles.notificationButton}
+            >
+              <Bell size={18} color={theme.surface} />
+              {notificationCount > 0 && (
+                <View style={styles.notificationBadge}>
+                  <Text style={styles.notificationBadgeText}>
+                    {notificationCount > 9 ? "9+" : notificationCount}
+                  </Text>
+                </View>
+              )}
+            </Pressable>
+
+            <Pressable
+              onPress={() => router.push(`/(Details)/NewProject`)}
+              style={styles.postButton}
+            >
+              <PlusCircle size={18} color={theme.surface} />
+              <Text style={styles.postButtonText}>Post Project</Text>
+            </Pressable>
+          </View>
         </View>
 
         {/* Stats Grid */}
@@ -471,6 +532,11 @@ const createStyles = (theme) =>
       justifyContent: "space-between",
       marginBottom: 24,
     },
+    headerActions: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+    },
     headerText: {
       flex: 1,
     },
@@ -497,6 +563,38 @@ const createStyles = (theme) =>
       shadowOpacity: 0.3,
       shadowRadius: 4,
       elevation: 4,
+    },
+    notificationButton: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: theme.primary,
+      elevation: 6,
+      shadowColor: theme.shadowColor,
+      shadowOffset: { width: 0, height: 3 },
+      shadowOpacity: 0.25,
+      shadowRadius: 6,
+    },
+    notificationBadge: {
+      position: "absolute",
+      top: -4,
+      right: -4,
+      minWidth: 18,
+      height: 18,
+      borderRadius: 9,
+      backgroundColor: theme.error,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: 4,
+      borderWidth: 2,
+      borderColor: theme.surface,
+    },
+    notificationBadgeText: {
+      color: theme.surface,
+      fontSize: 10,
+      fontWeight: "700",
     },
     postButtonText: {
       fontWeight: "700",

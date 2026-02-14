@@ -31,11 +31,13 @@ import {
 } from "react-native";
 import PaymentMethodModal from "../../components/PaymentMethodModal";
 import api from "../../lib/api";
+import apiMpesa from "../../lib/apiMpesa";
 import { supabase } from "../../lib/Client";
 import {
   ClientDetails,
   ClientId,
   getFreelancerStripeAccount,
+  PostNotifications,
 } from "../../lib/supabase";
 
 export default function ProjectDetails() {
@@ -116,7 +118,7 @@ export default function ProjectDetails() {
       const { data: projectData, error: projectError } = await supabase
         .from("projects")
         .select(
-          `*, category:project_categories(name), client_profile:client_profiles!projects_client_id_fkey(company_name,company_website,phone_number, avatar_url)`,
+          `*, category:project_categories(name), client_profile:client_profiles!projects_client_id_fkey(user_id,company_name,company_website,phone_number, avatar_url)`,
         )
         .eq("id", id)
         .single();
@@ -216,7 +218,6 @@ export default function ProjectDetails() {
       bid_amount: parseFloat(proposalData.bid_amount),
       estimated_duration: proposalData.estimated_duration,
     });
-
     setIsSubmitting(false);
     if (error) {
       toast({
@@ -225,6 +226,25 @@ export default function ProjectDetails() {
         variant: "destructive",
       });
     } else {
+      if (project?.client_profile?.user_id) {
+        await PostNotifications({
+          senderid: user.id,
+          receiveid: project.client_profile.user_id,
+          title: "sent you a proposal",
+          createdat: new Date().toISOString(),
+          data: JSON.stringify({
+            receiverid: project.client_profile.user_id,
+            project_id: id,
+            type: "proposal",
+          }),
+        });
+      } else {
+        console.warn("Skipping notification: missing client user id");
+        toast({
+          title: "Notification skipped",
+          description: "Missing client user id for this project.",
+        });
+      }
       toast({
         title: "Proposal submitted!",
         description: "The client will review your proposal.",
@@ -294,11 +314,6 @@ export default function ProjectDetails() {
         returnURL: "jobs://",
       });
 
-      if (initError) {
-        await supabase.from("transactions").delete().eq("id", transaction?.id);
-        throw new Error(initError.message);
-      }
-
       const { error: presentError } = await presentPaymentSheet();
 
       if (presentError) {
@@ -315,14 +330,7 @@ export default function ProjectDetails() {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            paymentIntentId: paymentIntentId,
-            projectId: id,
-            bidId: selectedProposal.id,
-            clientId: user.id,
-            freelancerId: selectedProposal.freelancer_id,
-            amount: amount,
-          }),
+          body: JSON.stringify({ paymentIntentId: paymentIntentId }),
         },
       );
 
@@ -348,6 +356,26 @@ export default function ProjectDetails() {
         .update({ status: "rejected" })
         .eq("project_id", id)
         .neq("id", selectedProposal.id);
+      if (selectedProposal?.freelancer_id) {
+        await PostNotifications({
+          senderid: user.id,
+          receiveid: selectedProposal.freelancer_id,
+          title: "accepted your bid",
+          createdat: new Date().toISOString(),
+          data: JSON.stringify({
+            receiverid: selectedProposal.freelancer_id,
+            project_id: id,
+            bidId: selectedProposal.id,
+            type: "proposal_accepted",
+          }),
+        });
+      } else {
+        console.warn("Skipping notification: missing freelancer id");
+        toast({
+          title: "Notification skipped",
+          description: "Missing freelancer id for this proposal.",
+        });
+      }
 
       setTransaction(confirmedTransaction);
 
@@ -396,6 +424,29 @@ export default function ProjectDetails() {
 
   const handleMpesaRelease = async (acceptedProposal) => {
     try {
+      if (!transaction) {
+        Alert.alert("Error", "Transaction not found.");
+        return;
+      }
+
+      if (transaction.status === "processing_release") {
+        Alert.alert("Release in progress", "A payout is already processing.");
+        return;
+      }
+
+      if (transaction.status === "released") {
+        Alert.alert("Already released", "This payout has already been sent.");
+        return;
+      }
+
+      if (transaction.status !== "held_in_escrow") {
+        Alert.alert(
+          "Cannot release funds",
+          `Transaction status: ${transaction.status}`,
+        );
+        return;
+      }
+
       setIsLoading(true);
 
       const { data: profile } = await supabase
@@ -408,7 +459,27 @@ export default function ProjectDetails() {
         throw new Error("Freelancer phone number not found");
       }
 
-      const b2cResponse = await api.post("/mpesa/b2c-payment", {
+      const { data: lockedTx, error: lockError } = await supabase
+        .from("transactions")
+        .update({ status: "processing_release" })
+        .eq("id", transaction.id)
+        .eq("status", "held_in_escrow")
+        .select("id,status")
+        .maybeSingle();
+
+      if (lockError) {
+        throw lockError;
+      }
+
+      if (!lockedTx) {
+        Alert.alert(
+          "Release not allowed",
+          "This payout is already being processed or was released.",
+        );
+        return;
+      }
+
+      const b2cResponse = await apiMpesa.post("/mpesa/b2c-payment", {
         phoneNumber: profile.phone_number,
         amount: transaction?.freelancer_amount,
         remarks: `Project: ${project?.title}`,
@@ -416,22 +487,41 @@ export default function ProjectDetails() {
         transaction: transaction,
         finalProjectId: id,
       });
-      await supabase
-        .from("transactions")
-        .update({
-          status: "processing_release",
-          mpesa_conversation_id: b2cResponse.data.conversationID,
-        })
-        .eq("id", transaction?.id);
 
+      if (b2cResponse?.data?.status !== "success") {
+        throw new Error(
+          b2cResponse?.data?.message ||
+            "Failed to initiate M-Pesa payout. Please try again.",
+        );
+      }
+
+      await PostNotifications({
+        senderid: user.id,
+        receiveid: acceptedProposal.freelancer_id,
+        title: "Payment release initiated",
+        createdat: new Date().toISOString(),
+        data: JSON.stringify({
+          receiverid: acceptedProposal.freelancer_id,
+          project_id: id,
+          bidId: acceptedProposal.id,
+          type: "payment_release_started",
+        }),
+      });
       Alert.alert(
         "Payment Initiated!",
-        "Funds are being sent to freelancer via M-Pesa",
+        "M-Pesa payout has been initiated. We'll update you when it completes.",
         [{ text: "OK" }],
       );
 
       fetchProjectData();
     } catch (error) {
+      if (transaction?.id) {
+        await supabase
+          .from("transactions")
+          .update({ status: "held_in_escrow" })
+          .eq("id", transaction.id)
+          .eq("status", "processing_release");
+      }
       Alert.alert("Error", error.message);
     } finally {
       setIsLoading(false);
@@ -474,7 +564,18 @@ export default function ProjectDetails() {
                   response.data?.error || "Failed to release funds",
                 );
               }
-
+              await PostNotifications({
+                senderid: user.id,
+                receiveid: acceptedProposal.freelancer_id,
+                title: "Released payment",
+                createdat: new Date().toISOString(),
+                data: JSON.stringify({
+                  receiverid: acceptedProposal.freelancer_id,
+                  project_id: id,
+                  bidId: acceptedProposal.id,
+                  type: "payment",
+                }),
+              });
               Alert.alert(
                 "Payment Released!",
                 `$${transaction.freelancer_amount.toFixed(2)} has been transferred to the freelancer.`,

@@ -1,6 +1,5 @@
 // services/stripeApiClient.js
-const STRIPE_BASE_URL =
-  "https://jargonistic-meadow-heliographically.ngrok-free.dev";
+const STRIPE_BASE_URL = "https://lancerstripe-production.up.railway.app";
 
 class StripeApiClient {
   constructor() {

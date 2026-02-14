@@ -200,6 +200,7 @@ export default function Profile() {
   };
 
   const handleDisconnectStripe = () => {
+    const userId = user?.id;
     Alert.alert(
       "Disconnect Stripe",
       "Are you sure you want to disconnect your Stripe account? You won't be able to receive payments.",
@@ -210,7 +211,7 @@ export default function Profile() {
           style: "destructive",
           onPress: async () => {
             try {
-              await disconnectAccount({ stripeAccountId });
+              await disconnectAccount({ userId, stripeAccountId });
 
               // Update local state
               setStripeConnected(false);
