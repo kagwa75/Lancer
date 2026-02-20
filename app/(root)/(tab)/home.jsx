@@ -2,9 +2,11 @@ import { useTheme } from "@/hooks/ThemeContext";
 import { useAuth } from "@/hooks/useAuth";
 import { Link, router } from "expo-router";
 import {
+  AlertCircle,
   ArrowRight,
   Bell,
   Briefcase,
+  CheckCircle,
   Clock,
   DollarSign,
   FolderOpen,
@@ -22,6 +24,7 @@ import {
   ActivityIndicator,
   Modal,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -41,11 +44,18 @@ export default function ClientDashboard() {
   const [stats, setStats] = useState({
     totalProjects: 0,
     activeProjects: 0,
+    completedProjects: 0,
     totalProposals: 0,
+    held_in_escrow: 0,
+    totalSpent: 0,
+    successRate: 0,
+    averageProjectValue: 0,
   });
   const [notificationCount, setNotificationCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const posthog = usePostHog();
+
   useEffect(() => {
     if (user) fetchDashboardData();
   }, [user]);
@@ -78,41 +88,116 @@ export default function ClientDashboard() {
 
   const fetchDashboardData = async () => {
     if (!user) return;
-    const { clientProfile } = await ClientId(user?.id);
+
     try {
+      const { clientProfile } = await ClientId(user?.id);
       const { data: projectsData } = await getProjects(clientProfile?.id);
 
       if (projectsData) {
+        // Fetch proposal counts for all projects
         const withCounts = await Promise.all(
           projectsData.map(async (project) => {
             const { count, error } = await supabase
               .from("bids")
               .select("*", { count: "exact", head: true })
               .eq("project_id", project.id);
-            if (error) return console.error(error);
+
+            if (error) {
+              console.error(error);
+              return { ...project, proposals_count: 0 };
+            }
+
             return { ...project, proposals_count: count || 0 };
           }),
         );
+
         setProjects(withCounts);
 
+        // Calculate total proposals
         const totalProposals = withCounts.reduce(
           (sum, p) => sum + (p.proposals_count || 0),
           0,
         );
 
+        // Fetch all transactions for this client
+        const { data: allTransactions, error: txError } = await supabase
+          .from("transactions")
+          .select("*")
+          .eq("client_id", user.id);
+
+        if (txError) throw txError;
+
+        // Calculate held in escrow
+        const heldInEscrow =
+          allTransactions
+            ?.filter((tx) => tx.status === "held_in_escrow")
+            .reduce((sum, tx) => sum + (tx.amount || 0), 0) || 0;
+
+        // Calculate total spent (released + completed transactions)
+        const totalSpent =
+          allTransactions
+            ?.filter(
+              (tx) => tx.status === "released" || tx.status === "completed",
+            )
+            .reduce((sum, tx) => sum + (tx.amount || 0), 0) || 0;
+
+        // Calculate project statistics
+        const totalProjects = withCounts.length;
+        const activeProjects = withCounts.filter(
+          (p) => p.status === "open" || p.status === "in_progress",
+        ).length;
+        const completedProjects = withCounts.filter(
+          (p) => p.status === "completed",
+        ).length;
+
+        // Calculate success rate (completed / (completed + cancelled))
+        const finishedProjects = withCounts.filter(
+          (p) => p.status === "completed" || p.status === "cancelled",
+        ).length;
+        const successRate =
+          finishedProjects > 0
+            ? Math.round((completedProjects / finishedProjects) * 100)
+            : 0;
+
+        // Calculate average project value
+        const projectsWithBudget = withCounts.filter(
+          (p) => p.budget_max && p.budget_max > 0,
+        );
+        const averageProjectValue =
+          projectsWithBudget.length > 0
+            ? Math.round(
+                projectsWithBudget.reduce(
+                  (sum, p) => sum + (p.budget_max || 0),
+                  0,
+                ) / projectsWithBudget.length,
+              )
+            : 0;
+
         setStats({
-          totalProjects: withCounts.length,
-          activeProjects: withCounts.filter(
-            (p) => p.status === "open" || p.status === "in_progress",
-          ).length,
+          totalProjects,
+          activeProjects,
+          completedProjects,
           totalProposals,
+          held_in_escrow: heldInEscrow,
+          totalSpent,
+          successRate,
+          averageProjectValue,
         });
       }
 
       setLoading(false);
+      setRefreshing(false);
     } catch (error) {
-      console.error(error);
+      console.error("Error fetching dashboard data:", error);
+      setLoading(false);
+      setRefreshing(false);
     }
+  };
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchDashboardData();
+    fetchNotificationCount();
   };
 
   const fetchNotificationCount = async () => {
@@ -135,7 +220,7 @@ export default function ClientDashboard() {
   const handleLogout = async () => {
     setModalVisible(false);
     posthog.capture("button_pressed", {
-      button_name: "signup",
+      button_name: "logout",
     });
     await signOut();
     router.replace("/login");
@@ -169,7 +254,17 @@ export default function ClientDashboard() {
 
   return (
     <>
-      <ScrollView style={styles.container}>
+      <ScrollView
+        style={styles.container}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={theme.primary}
+            colors={[theme.primary]}
+          />
+        }
+      >
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerText}>
@@ -204,7 +299,7 @@ export default function ClientDashboard() {
           </View>
         </View>
 
-        {/* Stats Grid */}
+        {/* Stats Grid - Enhanced */}
         <View style={styles.statsGrid}>
           <StatCard
             title="Total Projects"
@@ -225,24 +320,63 @@ export default function ClientDashboard() {
             bgColor={theme.cardHighlight || theme.surfaceAlt}
             theme={theme}
           />
+
           <StatCard
-            title="Active Budget"
-            value="$0"
-            subtitle="In escrow"
-            icon={<DollarSign size={20} color={theme.success} />}
-            bgColor={theme.successBg}
-            theme={theme}
-          />
-          <StatCard
-            title="Success Rate"
-            value="100%"
-            subtitle="Completed"
-            icon={<TrendingUp size={20} color={theme.warning} />}
+            title="In Escrow"
+            value={`$${stats.held_in_escrow.toLocaleString()}`}
+            subtitle="Active budget"
+            icon={<DollarSign size={20} color={theme.warning} />}
             bgColor={theme.warningBg}
             theme={theme}
           />
+
+          <StatCard
+            title="Success Rate"
+            value={`${stats.successRate}%`}
+            subtitle={`${stats.completedProjects} completed`}
+            icon={
+              stats.successRate >= 80 ? (
+                <CheckCircle size={20} color={theme.success} />
+              ) : stats.successRate >= 50 ? (
+                <TrendingUp size={20} color={theme.warning} />
+              ) : (
+                <AlertCircle size={20} color={theme.error} />
+              )
+            }
+            bgColor={
+              stats.successRate >= 80
+                ? theme.successBg
+                : stats.successRate >= 50
+                  ? theme.warningBg
+                  : theme.errorBg
+            }
+            theme={theme}
+          />
         </View>
+
+        {/* Additional Stats Row */}
+        <View style={styles.additionalStats}>
+          <View style={styles.additionalStatCard}>
+            <Text style={styles.additionalStatLabel}>Total Spent</Text>
+            <Text style={styles.additionalStatValue}>
+              ${stats.totalSpent.toLocaleString()}
+            </Text>
+            <Text style={styles.additionalStatSubtext}>
+              On completed projects
+            </Text>
+          </View>
+
+          <View style={styles.additionalStatCard}>
+            <Text style={styles.additionalStatLabel}>Avg. Project Value</Text>
+            <Text style={styles.additionalStatValue}>
+              ${stats.averageProjectValue.toLocaleString()}
+            </Text>
+            <Text style={styles.additionalStatSubtext}>Budget per project</Text>
+          </View>
+        </View>
+
         <FeedBackForm user={user} />
+
         {/* Recent Projects Card */}
         <View style={styles.projectsCard}>
           <View style={styles.projectsHeader}>
@@ -280,7 +414,7 @@ export default function ClientDashboard() {
             </View>
           ) : (
             <View style={styles.projectsList}>
-              {projects.map((project) => {
+              {projects.slice(0, 5).map((project) => {
                 const statusStyles = getStatusStyles(project.status);
                 return (
                   <Link
@@ -288,10 +422,7 @@ export default function ClientDashboard() {
                     href={`/(Details)/${project.id}`}
                     asChild
                   >
-                    <TouchableOpacity
-                      key={project.id}
-                      style={styles.projectItem}
-                    >
+                    <TouchableOpacity style={styles.projectItem}>
                       <View style={styles.projectMain}>
                         <View style={styles.projectContent}>
                           <Text style={styles.projectTitle} numberOfLines={2}>
@@ -350,6 +481,18 @@ export default function ClientDashboard() {
                   </Link>
                 );
               })}
+
+              {projects.length > 5 && (
+                <Pressable
+                  style={styles.viewAllButton}
+                  onPress={() => router.push("/(tab)/projects")}
+                >
+                  <Text style={styles.viewAllText}>
+                    View all {projects.length} projects
+                  </Text>
+                  <ArrowRight size={16} color={theme.primary} />
+                </Pressable>
+              )}
             </View>
           )}
         </View>
@@ -362,21 +505,47 @@ export default function ClientDashboard() {
               style={styles.quickActionCard}
               onPress={() => router.push("/(tab)/projects")}
             >
-              <FolderOpen size={24} color={theme.primary} />
+              <View style={styles.quickActionIcon}>
+                <FolderOpen size={24} color={theme.primary} />
+              </View>
               <Text style={styles.quickActionText}>View All Projects</Text>
             </Pressable>
+
             <Pressable
               style={styles.quickActionCard}
               onPress={() => router.push("/freelancers")}
             >
-              <Users size={24} color={theme.primaryDark || theme.primary} />
+              <View style={styles.quickActionIcon}>
+                <Users size={24} color={theme.primaryDark || theme.primary} />
+              </View>
               <Text style={styles.quickActionText}>Browse Freelancers</Text>
+            </Pressable>
+
+            <Pressable
+              style={styles.quickActionCard}
+              onPress={() => router.push("/settings")}
+            >
+              <View style={styles.quickActionIcon}>
+                <Settings size={24} color={theme.text} />
+              </View>
+              <Text style={styles.quickActionText}>Settings</Text>
+            </Pressable>
+
+            <Pressable
+              style={styles.quickActionCard}
+              onPress={() => router.push("/profile")}
+            >
+              <View style={styles.quickActionIcon}>
+                <User size={24} color={theme.text} />
+              </View>
+              <Text style={styles.quickActionText}>Profile</Text>
             </Pressable>
           </View>
         </View>
 
         <View style={styles.bottomSpacer} />
       </ScrollView>
+
       {/* Floating Profile Avatar */}
       <Pressable
         style={styles.floatingAvatar}
@@ -470,6 +639,11 @@ const createStatCardStyles = (theme) =>
       padding: 16,
       borderWidth: 1,
       borderColor: theme.borderLight,
+      shadowColor: theme.shadowColor,
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.05,
+      shadowRadius: 3,
+      elevation: 1,
     },
     statHeader: {
       flexDirection: "row",
@@ -607,7 +781,39 @@ const createStyles = (theme) =>
       flexDirection: "row",
       flexWrap: "wrap",
       gap: 12,
+      marginBottom: 16,
+    },
+
+    // Additional Stats
+    additionalStats: {
+      flexDirection: "row",
+      gap: 12,
       marginBottom: 24,
+    },
+    additionalStatCard: {
+      flex: 1,
+      backgroundColor: theme.surface,
+      borderRadius: 12,
+      padding: 16,
+      borderWidth: 1,
+      borderColor: theme.borderLight,
+    },
+    additionalStatLabel: {
+      fontSize: 12,
+      color: theme.textSecondary,
+      fontWeight: "600",
+      marginBottom: 8,
+    },
+    additionalStatValue: {
+      fontSize: 22,
+      fontWeight: "800",
+      color: theme.text,
+      marginBottom: 4,
+    },
+    additionalStatSubtext: {
+      fontSize: 11,
+      color: theme.textMuted,
+      fontWeight: "500",
     },
 
     // Projects Card
@@ -758,6 +964,23 @@ const createStyles = (theme) =>
       fontWeight: "700",
       textTransform: "capitalize",
     },
+    viewAllButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+      paddingVertical: 14,
+      borderWidth: 1,
+      borderColor: theme.border,
+      borderRadius: 12,
+      borderStyle: "dashed",
+      marginTop: 4,
+    },
+    viewAllText: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: theme.primary,
+    },
 
     // Quick Actions
     quickActions: {
@@ -771,10 +994,11 @@ const createStyles = (theme) =>
     },
     quickActionsGrid: {
       flexDirection: "row",
+      flexWrap: "wrap",
       gap: 12,
     },
     quickActionCard: {
-      flex: 1,
+      width: "48%",
       backgroundColor: theme.surface,
       borderRadius: 16,
       padding: 20,
@@ -782,6 +1006,14 @@ const createStyles = (theme) =>
       gap: 12,
       borderWidth: 1,
       borderColor: theme.border,
+    },
+    quickActionIcon: {
+      width: 48,
+      height: 48,
+      borderRadius: 12,
+      backgroundColor: theme.iconBg,
+      alignItems: "center",
+      justifyContent: "center",
     },
     quickActionText: {
       fontSize: 14,
@@ -793,6 +1025,7 @@ const createStyles = (theme) =>
     bottomSpacer: {
       height: 32,
     },
+
     // Floating Avatar Styles
     floatingAvatar: {
       position: "absolute",

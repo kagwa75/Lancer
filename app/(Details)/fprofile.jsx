@@ -27,6 +27,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { supabase } from "../../lib/Client";
 import { getFreelancerProfile, getUser } from "../../lib/supabase";
 import { useStripeConnect } from "../../services/useStripeMutation";
 
@@ -42,6 +43,9 @@ export default function Profile() {
   const [stripeConnected, setStripeConnected] = useState(false);
   const [stripeAccountId, setStripeAccountId] = useState(null);
   const [error, setError] = useState(null);
+  const [reviews, setReviews] = useState([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [reviewsError, setReviewsError] = useState(null);
 
   // Use React Query mutation hook
   const {
@@ -83,6 +87,7 @@ export default function Profile() {
   useEffect(() => {
     if (user && !authLoading && userRole === "freelancer") {
       fetchProfile();
+      fetchReviews();
     }
   }, [user, authLoading, userRole]);
 
@@ -167,6 +172,34 @@ export default function Profile() {
       setLoading(false);
     }
   }
+
+  const fetchReviews = async () => {
+    if (!user) return;
+    try {
+      setReviewsLoading(true);
+      setReviewsError(null);
+
+      const { data, error: reviewsError } = await supabase
+        .from("project_reviews")
+        .select(
+          "id,rating,feedback,created_at, client:profiles!project_reviews_client_id_fkey(full_name,avatar_url), project:projects!project_reviews_project_id_fkey(title)",
+        )
+        .eq("freelancer_id", user.id)
+        .eq("review_type", "client_to_freelancer")
+        .order("created_at", { ascending: false });
+
+      if (reviewsError) {
+        throw reviewsError;
+      }
+
+      setReviews(data || []);
+    } catch (error) {
+      console.error("Error fetching reviews:", error);
+      setReviewsError(error.message || "Failed to load reviews");
+    } finally {
+      setReviewsLoading(false);
+    }
+  };
 
   const handleConnectStripe = async () => {
     try {
@@ -296,6 +329,12 @@ export default function Profile() {
     availabilityColors[profile?.availability] || theme.textMuted;
   const availabilityLabel =
     availabilityLabels[profile?.availability] || "Unknown";
+  const averageRating = reviews.length
+    ? (
+        reviews.reduce((sum, review) => sum + (review.rating || 0), 0) /
+        reviews.length
+      ).toFixed(1)
+    : "0.0";
 
   return (
     <ScrollView showsVerticalScrollIndicator={false} style={styles.container}>
@@ -398,6 +437,86 @@ export default function Profile() {
             </Text>
             <Text style={styles.statLabel}>Skills</Text>
           </View>
+        </View>
+
+        {/* Reviews Section */}
+        <View style={styles.card}>
+          <View style={styles.sectionHeader}>
+            <Star size={18} color={theme.warning} />
+            <Text style={styles.sectionTitle}>Reviews</Text>
+            <View style={styles.ratingBadge}>
+              <Text style={styles.ratingValue}>{averageRating}</Text>
+              <Text style={styles.ratingCount}>({reviews.length})</Text>
+            </View>
+          </View>
+
+          {reviewsLoading ? (
+            <View style={styles.reviewsLoading}>
+              <ActivityIndicator size="small" color={theme.primary} />
+              <Text style={styles.reviewsLoadingText}>Loading reviews...</Text>
+            </View>
+          ) : reviewsError ? (
+            <View style={styles.reviewsError}>
+              <Text style={styles.reviewsErrorText}>{reviewsError}</Text>
+              <TouchableOpacity
+                style={styles.retryButton}
+                onPress={fetchReviews}
+              >
+                <Text style={styles.retryButtonText}>Retry</Text>
+              </TouchableOpacity>
+            </View>
+          ) : reviews.length === 0 ? (
+            <Text style={styles.emptyReviewsText}>
+              No reviews yet. Complete projects to start receiving feedback.
+            </Text>
+          ) : (
+            <View style={styles.reviewsList}>
+              {reviews.map((review) => (
+                <View key={review.id} style={styles.reviewItem}>
+                  <View style={styles.reviewHeader}>
+                    <View style={styles.reviewInfo}>
+                      <Text style={styles.reviewName}>
+                        {review.client?.full_name || "Client"}
+                      </Text>
+                      <Text style={styles.reviewProject}>
+                        {review.project?.title || "Project"}
+                      </Text>
+                    </View>
+                    <View style={styles.reviewRatingRow}>
+                      {[1, 2, 3, 4, 5].map((value) => (
+                        <Star
+                          key={value}
+                          size={14}
+                          color={
+                            value <= review.rating
+                              ? theme.warning
+                              : theme.border
+                          }
+                          fill={
+                            value <= review.rating
+                              ? theme.warning
+                              : "transparent"
+                          }
+                        />
+                      ))}
+                    </View>
+                  </View>
+                  {review.feedback ? (
+                    <Text style={styles.reviewFeedback}>
+                      {review.feedback}
+                    </Text>
+                  ) : (
+                    <Text style={styles.reviewFeedbackMuted}>
+                      No written feedback.
+                    </Text>
+                  )}
+                  <Text style={styles.reviewDate}>
+                    {new Date(review.created_at).toLocaleDateString()}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          )}
         </View>
 
         {/* Stripe Connection Card */}
@@ -856,6 +975,109 @@ const createStyles = (theme) =>
       flex: 1,
       fontSize: 14,
       color: theme.primary,
+    },
+    ratingBadge: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      marginLeft: "auto",
+      backgroundColor: theme.surfaceAlt,
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: 12,
+    },
+    ratingValue: {
+      fontSize: 14,
+      fontWeight: "700",
+      color: theme.text,
+    },
+    ratingCount: {
+      fontSize: 12,
+      color: theme.textSecondary,
+    },
+    reviewsLoading: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    },
+    reviewsLoadingText: {
+      fontSize: 13,
+      color: theme.textSecondary,
+    },
+    reviewsError: {
+      gap: 8,
+    },
+    reviewsErrorText: {
+      color: theme.error,
+      fontSize: 13,
+    },
+    retryButton: {
+      alignSelf: "flex-start",
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    retryButtonText: {
+      fontSize: 13,
+      color: theme.textSecondary,
+      fontWeight: "600",
+    },
+    emptyReviewsText: {
+      fontSize: 14,
+      color: theme.textSecondary,
+      lineHeight: 20,
+    },
+    reviewsList: {
+      gap: 12,
+    },
+    reviewItem: {
+      backgroundColor: theme.surfaceAlt,
+      borderRadius: 10,
+      padding: 12,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    reviewHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+      gap: 12,
+      marginBottom: 6,
+    },
+    reviewInfo: {
+      flex: 1,
+    },
+    reviewName: {
+      fontSize: 14,
+      fontWeight: "700",
+      color: theme.text,
+    },
+    reviewProject: {
+      fontSize: 12,
+      color: theme.textSecondary,
+      marginTop: 2,
+    },
+    reviewRatingRow: {
+      flexDirection: "row",
+      gap: 2,
+      marginTop: 2,
+    },
+    reviewFeedback: {
+      fontSize: 13,
+      color: theme.text,
+      lineHeight: 18,
+      marginBottom: 6,
+    },
+    reviewFeedbackMuted: {
+      fontSize: 12,
+      color: theme.textMuted,
+      marginBottom: 6,
+    },
+    reviewDate: {
+      fontSize: 11,
+      color: theme.textMuted,
     },
     emptyState: {
       backgroundColor: theme.surface,

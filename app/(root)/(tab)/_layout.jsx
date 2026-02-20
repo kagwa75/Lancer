@@ -1,10 +1,39 @@
+import { useAuth } from "@/hooks/useAuth";
 import { Ionicons } from "@expo/vector-icons";
-import { Tabs } from "expo-router";
-import { Platform, useColorScheme } from "react-native";
+import { Tabs, useFocusEffect } from "expo-router";
+import { useCallback, useState } from "react";
+import { Alert, Platform, Text, useColorScheme, View } from "react-native";
+import { getChatConversations } from "../../../lib/supabase";
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
+  const { user } = useAuth();
+  const [conversations, setConversations] = useState([]);
+
+  const loadConversations = useCallback(async () => {
+    if (!user?.id) return;
+
+    try {
+      const results = await getChatConversations(user.id);
+      console.log("results:", results);
+      setConversations(Array.isArray(results) ? results : []);
+    } catch (error) {
+      console.error("Error loading conversations:", error);
+      Alert.alert("Error", "Could not load conversations");
+    }
+  }, [user?.id]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadConversations();
+    }, [loadConversations]),
+  );
+
+  const conversationCount = conversations.reduce(
+    (sum, c) => sum + (c.unread_count || 0),
+    0,
+  );
 
   return (
     <Tabs
@@ -62,11 +91,41 @@ export default function TabLayout() {
         options={{
           title: "Chats",
           tabBarIcon: ({ focused, color, size }) => (
-            <Ionicons
-              name={focused ? "chatbubble" : "chatbubble-outline"}
-              size={size}
-              color={color}
-            />
+            <View style={{ position: "relative" }}>
+              <Ionicons
+                name={focused ? "chatbubble" : "chatbubble-outline"}
+                size={size}
+                color={color}
+              />
+              {conversationCount > 0 && (
+                <View
+                  style={{
+                    position: "absolute",
+                    top: -6,
+                    right: -6,
+                    backgroundColor: "#ef4444", // Red-500
+                    borderRadius: 10,
+                    minWidth: 18,
+                    height: 18,
+                    justifyContent: "center",
+                    alignItems: "center",
+                    borderWidth: 2,
+                    borderColor: isDark ? "#0f172a" : "#f8fafc",
+                  }}
+                >
+                  <Text
+                    style={{
+                      color: "white",
+                      fontSize: 10,
+                      fontWeight: "bold",
+                      paddingHorizontal: 4,
+                    }}
+                  >
+                    {conversationCount > 9 ? "9+" : conversationCount}
+                  </Text>
+                </View>
+              )}
+            </View>
           ),
         }}
       />

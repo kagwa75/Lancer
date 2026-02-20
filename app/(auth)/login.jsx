@@ -14,6 +14,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  useWindowDimensions,
   View,
 } from "react-native";
 import { z } from "zod";
@@ -27,6 +28,8 @@ const nameSchema = z.string().min(2, "Name must be at least 2 characters");
 export default function AuthScreen() {
   const { theme } = useTheme();
   const styles = createStyles(theme);
+  const { width } = useWindowDimensions();
+  const isDesktop = Platform.OS === "web" && width >= 900;
 
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState("");
@@ -157,151 +160,160 @@ export default function AuthScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Logo */}
-        <View style={styles.logoContainer}>
-          <View style={styles.logoBox}>
-            <FontAwesome5 name="briefcase" size={28} color="#fff" />
-          </View>
-          <Text style={styles.logoText}>FreelanceHub</Text>
-        </View>
-
-        {/* Tagline */}
-        <Text style={styles.tagline}>
-          {isSignUp
-            ? "Join thousands of freelancers and clients"
-            : "Welcome back! Let's get to work"}
-        </Text>
-
-        {/* Card */}
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.title}>
-              {isSignUp ? "Create Account" : "Sign In"}
-            </Text>
-            <Text style={styles.subtitle}>
-              {isSignUp
-                ? "Start your freelance journey today"
-                : "Continue to your dashboard"}
-            </Text>
-          </View>
-
-          {/* Google Sign In Button - Prominent Position */}
-          <Pressable
-            style={[
-              styles.googleButton,
-              isGoogleLoading && styles.googleButtonLoading,
-            ]}
-            onPress={handleGoogleSignIn}
-            disabled={isGoogleLoading}
-          >
-            {isGoogleLoading ? (
-              <ActivityIndicator color={theme.text} />
-            ) : (
-              <>
-                <FontAwesome5 name="google" size={20} color="#EA4335" />
-                <Text style={styles.googleText}>Continue with Google</Text>
-              </>
-            )}
-          </Pressable>
-
-          <View style={styles.dividerContainer}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>OR</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
-          {/* Form Inputs */}
-          {isSignUp && (
-            <View style={styles.inputContainer}>
-              <Input
-                icon="person"
-                placeholder="Full Name"
-                value={fullName}
-                onChangeText={setFullName}
-                theme={theme}
-                autoCapitalize="words"
-              />
-              {errors.name && <ErrorText text={errors.name} theme={theme} />}
+        <View
+          style={[
+            styles.contentWrapper,
+            isDesktop && styles.contentWrapperWide,
+          ]}
+        >
+          {/* Logo */}
+          <View style={styles.logoContainer}>
+            <View style={styles.logoBox}>
+              <FontAwesome5 name="briefcase" size={28} color="#fff" />
             </View>
-          )}
-
-          <View style={styles.inputContainer}>
-            <Input
-              icon="email"
-              placeholder="Email"
-              value={email}
-              onChangeText={setEmail}
-              theme={theme}
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-            {errors.email && <ErrorText text={errors.email} theme={theme} />}
+            <Text style={styles.logoText}>FreelanceHub</Text>
           </View>
 
-          <View style={styles.inputContainer}>
-            <Input
-              icon="lock"
-              placeholder="Password"
-              secureTextEntry
-              value={password}
-              onChangeText={setPassword}
-              theme={theme}
-            />
-            {errors.password && (
-              <ErrorText text={errors.password} theme={theme} />
-            )}
-          </View>
+          {/* Tagline */}
+          <Text style={styles.tagline}>
+            {isSignUp
+              ? "Join thousands of freelancers and clients"
+              : "Welcome back! Let's get to work"}
+          </Text>
 
-          {/* Submit Button */}
-          <Pressable
-            style={[
-              styles.primaryButton,
-              (isLoading || isGoogleLoading) && styles.primaryButtonDisabled,
-            ]}
-            onPress={handleSubmit}
-            disabled={isLoading || isGoogleLoading}
-          >
-            {isLoading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.primaryButtonText}>
+          {/* Card */}
+          <View style={styles.card}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.title}>
                 {isSignUp ? "Create Account" : "Sign In"}
               </Text>
-            )}
-          </Pressable>
-
-          {/* Forgot Password */}
-          {!isSignUp && (
-            <Pressable style={styles.forgotPassword}>
-              <Text style={styles.forgotPasswordText}>Forgot password?</Text>
-            </Pressable>
-          )}
-
-          {/* Switch Auth Mode */}
-          <View style={styles.switchContainer}>
-            <Text style={styles.switchText}>
-              {isSignUp ? "Already have an account?" : "Don't have an account?"}
-            </Text>
-            <Pressable
-              onPress={() => {
-                setIsSignUp(!isSignUp);
-                setErrors({});
-              }}
-            >
-              <Text style={styles.switchLink}>
-                {isSignUp ? "Sign In" : "Sign Up"}
+              <Text style={styles.subtitle}>
+                {isSignUp
+                  ? "Start your freelance journey today"
+                  : "Continue to your dashboard"}
               </Text>
-            </Pressable>
-          </View>
-        </View>
+            </View>
 
-        {/* Footer */}
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>
-            By continuing, you agree to our{" "}
-            <Text style={styles.footerLink}>Terms of Service</Text> and{" "}
-            <Text style={styles.footerLink}>Privacy Policy</Text>
-          </Text>
+            {/* Google Sign In Button - Prominent Position */}
+            <Pressable
+              style={[
+                styles.googleButton,
+                isGoogleLoading && styles.googleButtonLoading,
+              ]}
+              onPress={handleGoogleSignIn}
+              disabled={isGoogleLoading}
+            >
+              {isGoogleLoading ? (
+                <ActivityIndicator color={theme.text} />
+              ) : (
+                <>
+                  <FontAwesome5 name="google" size={20} color="#EA4335" />
+                  <Text style={styles.googleText}>Continue with Google</Text>
+                </>
+              )}
+            </Pressable>
+
+            <View style={styles.dividerContainer}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>OR</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            {/* Form Inputs */}
+            {isSignUp && (
+              <View style={styles.inputContainer}>
+                <Input
+                  icon="person"
+                  placeholder="Full Name"
+                  value={fullName}
+                  onChangeText={setFullName}
+                  theme={theme}
+                  autoCapitalize="words"
+                />
+                {errors.name && <ErrorText text={errors.name} theme={theme} />}
+              </View>
+            )}
+
+            <View style={styles.inputContainer}>
+              <Input
+                icon="email"
+                placeholder="Email"
+                value={email}
+                onChangeText={setEmail}
+                theme={theme}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+              {errors.email && <ErrorText text={errors.email} theme={theme} />}
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Input
+                icon="lock"
+                placeholder="Password"
+                secureTextEntry
+                value={password}
+                onChangeText={setPassword}
+                theme={theme}
+              />
+              {errors.password && (
+                <ErrorText text={errors.password} theme={theme} />
+              )}
+            </View>
+
+            {/* Submit Button */}
+            <Pressable
+              style={[
+                styles.primaryButton,
+                (isLoading || isGoogleLoading) && styles.primaryButtonDisabled,
+              ]}
+              onPress={handleSubmit}
+              disabled={isLoading || isGoogleLoading}
+            >
+              {isLoading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.primaryButtonText}>
+                  {isSignUp ? "Create Account" : "Sign In"}
+                </Text>
+              )}
+            </Pressable>
+
+            {/* Forgot Password */}
+            {!isSignUp && (
+              <Pressable style={styles.forgotPassword}>
+                <Text style={styles.forgotPasswordText}>Forgot password?</Text>
+              </Pressable>
+            )}
+
+            {/* Switch Auth Mode */}
+            <View style={styles.switchContainer}>
+              <Text style={styles.switchText}>
+                {isSignUp
+                  ? "Already have an account?"
+                  : "Don't have an account?"}
+              </Text>
+              <Pressable
+                onPress={() => {
+                  setIsSignUp(!isSignUp);
+                  setErrors({});
+                }}
+              >
+                <Text style={styles.switchLink}>
+                  {isSignUp ? "Sign In" : "Sign Up"}
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+
+          {/* Footer */}
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>
+              By continuing, you agree to our{" "}
+              <Text style={styles.footerLink}>Terms of Service</Text> and{" "}
+              <Text style={styles.footerLink}>Privacy Policy</Text>
+            </Text>
+          </View>
         </View>
       </ScrollView>
       {/* Loading Overlay */}
@@ -346,6 +358,14 @@ const createStyles = (theme) =>
       justifyContent: "center",
       paddingTop: 60,
       paddingBottom: 40,
+    },
+    contentWrapper: {
+      width: "100%",
+    },
+    contentWrapperWide: {
+      maxWidth: 520,
+      alignSelf: "center",
+      width: "100%",
     },
     logoContainer: {
       alignItems: "center",

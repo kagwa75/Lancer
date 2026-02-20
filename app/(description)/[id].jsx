@@ -3,6 +3,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { Feather } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { useStripe } from "@/lib/stripe-client";
 import {
   ArrowLeft,
   Award,
@@ -13,6 +14,8 @@ import {
   DollarSign,
   Send,
   Shield,
+  Star,
+  Trash2,
   User,
 } from "lucide-react-native";
 import { useEffect, useState } from "react";
@@ -21,7 +24,6 @@ import {
   Alert,
   Image,
   Modal,
-  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -33,6 +35,7 @@ import PaymentMethodModal from "../../components/PaymentMethodModal";
 import api from "../../lib/api";
 import apiMpesa from "../../lib/apiMpesa";
 import { supabase } from "../../lib/Client";
+import { sendPushNotification } from "../../lib/NotificationService";
 import {
   ClientDetails,
   ClientId,
@@ -46,11 +49,6 @@ export default function ProjectDetails() {
   const { theme, isDark } = useTheme();
   const router = useRouter();
   const { toast } = useToast();
-  const stripeImport =
-    Platform.OS === "web"
-      ? require("@/lib/stripe-mock")
-      : require("@stripe/stripe-react-native");
-  const { useStripe } = stripeImport;
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
 
   const [project, setProject] = useState(null);
@@ -62,6 +60,10 @@ export default function ProjectDetails() {
   const [transaction, setTransaction] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isReleaseConfirmOpen, setIsReleaseConfirmOpen] = useState(false);
+  const [releaseRating, setReleaseRating] = useState(0);
+  const [releaseFeedback, setReleaseFeedback] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [selectedProposal, setSelectedProposal] = useState(null);
@@ -72,6 +74,15 @@ export default function ProjectDetails() {
     bid_amount: "",
     estimated_duration: "",
   });
+
+  const safeSendPush = async (targetUserId, title, body, data = {}) => {
+    if (!targetUserId) return;
+    try {
+      await sendPushNotification(targetUserId, title, body, data);
+    } catch (error) {
+      console.warn("Push notification failed:", error?.message || error);
+    }
+  };
 
   useEffect(() => {
     if (!authLoading && !user) router.push("/(auth)/login");
@@ -211,33 +222,61 @@ export default function ProjectDetails() {
     if (!user || !id || userRole !== "freelancer") return;
 
     setIsSubmitting(true);
-    const { error } = await supabase.from("bids").insert({
-      project_id: id,
-      freelancer_id: user.id,
-      cover_letter: proposalData.cover_letter,
-      bid_amount: parseFloat(proposalData.bid_amount),
-      estimated_duration: proposalData.estimated_duration,
-    });
-    setIsSubmitting(false);
-    if (error) {
-      toast({
-        title: "Error",
-        description: "Failed to submit proposal. Please try again.",
-        variant: "destructive",
+    try {
+      const { data: freelancerProfile } = await supabase
+        .from("freelancer_profiles")
+        .select("phone_number")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (!freelancerProfile?.phone_number) {
+        Alert.alert(
+          "Phone number required",
+          "Please add your phone number before submitting a proposal.",
+          [
+            { text: "Cancel", style: "cancel" },
+            {
+              text: "Complete Profile",
+              onPress: () => router.push("/(Details)/fprofile"),
+            },
+          ],
+        );
+        return;
+      }
+
+      const { error } = await supabase.from("bids").insert({
+        project_id: id,
+        freelancer_id: user.id,
+        cover_letter: proposalData.cover_letter,
+        bid_amount: parseFloat(proposalData.bid_amount),
+        estimated_duration: proposalData.estimated_duration,
       });
-    } else {
+
+      if (error) {
+        toast({
+          title: "Error",
+          description: "Failed to submit proposal. Please try again.",
+          variant: "destructive",
+        });
+      } else {
       if (project?.client_profile?.user_id) {
         await PostNotifications({
           senderid: user.id,
           receiveid: project.client_profile.user_id,
           title: "sent you a proposal",
           createdat: new Date().toISOString(),
-          data: JSON.stringify({
-            receiverid: project.client_profile.user_id,
-            project_id: id,
+            data: JSON.stringify({
+              receiverid: project.client_profile.user_id,
+              project_id: id,
             type: "proposal",
           }),
         });
+        await safeSendPush(
+          project.client_profile.user_id,
+          "New proposal received",
+          `You received a proposal for "${project?.title}".`,
+          { project_id: id, type: "proposal" },
+        );
       } else {
         console.warn("Skipping notification: missing client user id");
         toast({
@@ -245,12 +284,21 @@ export default function ProjectDetails() {
           description: "Missing client user id for this project.",
         });
       }
+      await safeSendPush(
+        user.id,
+        "Proposal sent",
+        `Your proposal was sent for "${project?.title}".`,
+        { project_id: id, type: "proposal_sent" },
+      );
       toast({
         title: "Proposal submitted!",
         description: "The client will review your proposal.",
       });
-      setIsModalOpen(false);
-      fetchProjectData();
+        setIsModalOpen(false);
+        fetchProjectData();
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -369,6 +417,12 @@ export default function ProjectDetails() {
             type: "proposal_accepted",
           }),
         });
+        await safeSendPush(
+          selectedProposal.freelancer_id,
+          "Proposal accepted",
+          `Your proposal for "${project?.title}" was accepted.`,
+          { project_id: id, bidId: selectedProposal.id, type: "proposal_accepted" },
+        );
       } else {
         console.warn("Skipping notification: missing freelancer id");
         toast({
@@ -404,6 +458,29 @@ export default function ProjectDetails() {
 
   const releaseFunds = async () => {
     if (!transaction || !project) return;
+    const acceptedProposal = proposals.find(
+      (p) => p.id === transaction.bid_id && p.status === "accepted",
+    );
+    const { data: existingReview, error: reviewFetchError } = await supabase
+      .from("project_reviews")
+      .select("*")
+      .eq("project_id", id)
+      .eq("client_id", user.id)
+      .eq("freelancer_id", acceptedProposal.freelancer_id)
+      .eq("review_type", "client_to_freelancer")
+      .maybeSingle();
+
+    if (reviewFetchError) {
+      throw reviewFetchError;
+    }
+    console.log("project_reviews", existingReview);
+    setReleaseRating(existingReview?.rating);
+    setReleaseFeedback(existingReview?.feedback);
+    setIsReleaseConfirmOpen(true);
+  };
+
+  const proceedReleaseFunds = async () => {
+    if (!transaction || !project) return;
 
     const acceptedProposal = proposals.find(
       (p) => p.id === transaction.bid_id && p.status === "accepted",
@@ -422,6 +499,82 @@ export default function ProjectDetails() {
     }
   };
 
+  const handleConfirmRelease = async () => {
+    if (releaseRating < 1) return;
+
+    const acceptedProposal = proposals.find(
+      (p) => p.id === transaction?.bid_id && p.status === "accepted",
+    );
+
+    if (!acceptedProposal) {
+      Alert.alert("Error", "Could not find the accepted proposal.");
+      return;
+    }
+
+    try {
+      if (transaction?.payment_method === "mpesa") {
+        const { data: freelancerProfile } = await supabase
+          .from("freelancer_profiles")
+          .select("phone_number")
+          .eq("user_id", acceptedProposal.freelancer_id)
+          .maybeSingle();
+
+        if (!freelancerProfile?.phone_number) {
+          Alert.alert(
+            "Cannot release payment",
+            "The freelancer has not provided a phone number yet.",
+          );
+          return;
+        }
+      }
+
+      const { data: existingReview, error: reviewFetchError } = await supabase
+        .from("project_reviews")
+        .select("*")
+        .eq("project_id", id)
+        .eq("client_id", user.id)
+        .eq("freelancer_id", acceptedProposal.freelancer_id)
+        .eq("review_type", "client_to_freelancer")
+        .maybeSingle();
+
+      if (reviewFetchError) {
+        throw reviewFetchError;
+      }
+      console.log("project_reviews", existingReview);
+      setReleaseRating(existingReview?.rating);
+      setReleaseFeedback(existingReview?.feedback);
+      if (!existingReview) {
+        const { error: reviewError } = await supabase
+          .from("project_reviews")
+          .insert({
+            project_id: id,
+            client_id: user.id,
+            freelancer_id: acceptedProposal.freelancer_id,
+            rating: releaseRating,
+            feedback: releaseFeedback?.trim() || null,
+            review_type: "client_to_freelancer",
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          });
+
+        if (reviewError) {
+          throw reviewError;
+        }
+      }
+
+      setIsReleaseConfirmOpen(false);
+      await proceedReleaseFunds();
+      setReleaseRating(0);
+      setReleaseFeedback("");
+    } catch (error) {
+      console.error("Review save error:", error);
+      Alert.alert(
+        "Review not saved",
+        error.message || "Failed to save your review. Please try again.",
+      );
+    }
+  };
+
   const handleMpesaRelease = async (acceptedProposal) => {
     try {
       if (!transaction) {
@@ -429,11 +582,9 @@ export default function ProjectDetails() {
         return;
       }
 
-      {
-        if (transaction.status === "processing_release") {
-          Alert.alert("Release in progress", "A payout is already processing.");
-          return;
-        }
+      if (transaction.status === "processing_release") {
+        Alert.alert("Release in progress", "A payout is already processing.");
+        return;
       }
 
       if (transaction.status === "released") {
@@ -497,6 +648,12 @@ export default function ProjectDetails() {
         );
       }
 
+      await supabase
+        .from("projects")
+        .update({ status: "completed" })
+        .eq("id", id)
+        .eq("client_id", project?.client_id);
+
       await PostNotifications({
         senderid: user.id,
         receiveid: acceptedProposal.freelancer_id,
@@ -509,6 +666,12 @@ export default function ProjectDetails() {
           type: "payment_release_started",
         }),
       });
+      await safeSendPush(
+        acceptedProposal.freelancer_id,
+        "Payment release initiated",
+        `Payment for "${project?.title}" is being processed.`,
+        { project_id: id, type: "payment_release_started" },
+      );
       Alert.alert(
         "Payment Initiated!",
         "M-Pesa payout has been initiated. We'll update you when it completes.",
@@ -544,62 +707,58 @@ export default function ProjectDetails() {
       return;
     }
 
-    Alert.alert(
-      "Release Payment",
-      `This will release $${transaction.freelancer_amount.toFixed(2)} to the freelancer. Are you sure the project is complete?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Release Funds",
-          style: "default",
-          onPress: async () => {
-            try {
-              setIsLoading(true);
-              const response = await api.post("/stripe/release-funds", {
-                projectId: id,
-                transactionId: transaction.id,
-                freelancerStripeAccountId: freelancerStripeAccountId,
-              });
+    try {
+      setIsLoading(true);
+      const response = await api.post("/stripe/release-funds", {
+        projectId: id,
+        transactionId: transaction.id,
+        freelancerStripeAccountId: freelancerStripeAccountId,
+      });
 
-              if (response.status !== 200) {
-                throw new Error(
-                  response.data?.error || "Failed to release funds",
-                );
-              }
-              await PostNotifications({
-                senderid: user.id,
-                receiveid: acceptedProposal.freelancer_id,
-                title: "Released payment",
-                createdat: new Date().toISOString(),
-                data: JSON.stringify({
-                  receiverid: acceptedProposal.freelancer_id,
-                  project_id: id,
-                  bidId: acceptedProposal.id,
-                  type: "payment",
-                }),
-              });
-              Alert.alert(
-                "Payment Released!",
-                `$${transaction.freelancer_amount.toFixed(2)} has been transferred to the freelancer.`,
-                [{ text: "OK" }],
-              );
+      if (response.status !== 200) {
+        throw new Error(response.data?.error || "Failed to release funds");
+      }
+      await supabase
+        .from("projects")
+        .update({ status: "completed" })
+        .eq("id", id)
+        .eq("client_id", project?.client_id);
+      await PostNotifications({
+        senderid: user.id,
+        receiveid: acceptedProposal.freelancer_id,
+        title: "Released payment",
+        createdat: new Date().toISOString(),
+        data: JSON.stringify({
+          receiverid: acceptedProposal.freelancer_id,
+          project_id: id,
+          bidId: acceptedProposal.id,
+          type: "payment",
+        }),
+      });
+      await safeSendPush(
+        acceptedProposal.freelancer_id,
+        "Payment released",
+        `Your payment for "${project?.title}" has been released.`,
+        { project_id: id, type: "payment" },
+      );
+      Alert.alert(
+        "Payment Released!",
+        `$${transaction.freelancer_amount.toFixed(2)} has been transferred to the freelancer.`,
+        [{ text: "OK" }],
+      );
 
-              fetchProjectData();
-            } catch (error) {
-              console.error("Release payment error:", error);
-              Alert.alert(
-                "Error",
-                error.response?.data?.error ||
-                  error.message ||
-                  "Failed to release payment. Please try again.",
-              );
-            } finally {
-              setIsLoading(false);
-            }
-          },
-        },
-      ],
-    );
+      fetchProjectData();
+    } catch (error) {
+      console.error("Release payment error:", error);
+      Alert.alert(
+        "Error",
+        error.response?.data?.error ||
+          error.message ||
+          "Failed to release payment. Please try again.",
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const getStatusStyles = (status) => {
@@ -644,10 +803,103 @@ export default function ProjectDetails() {
   }
 
   const isOwner = user?.id === clientProfile?.user_id;
+  const hasActivePayment =
+    transaction &&
+    ["pending", "held_in_escrow", "processing_release", "released"].includes(
+      transaction.status,
+    );
+  const hasAcceptedProposal = proposals.some((p) => p.status === "accepted");
+  const canDeleteProject =
+    isOwner &&
+    !hasActivePayment &&
+    !hasAcceptedProposal &&
+    !["in_progress", "completed"].includes(project?.status);
   const canApply =
     userRole === "freelancer" && !existingProposal && project.status === "open";
   const statusStyles = getStatusStyles(project.status);
   const s = styles(theme);
+
+  const handleDeleteProject = async () => {
+    if (!isOwner || !project) return;
+
+    if (!canDeleteProject) {
+      let reason =
+        "Projects with active payments or in-progress/completed status cannot be deleted.";
+      if (hasActivePayment) {
+        reason =
+          "This project has active payments. Please complete or cancel the payment flow first.";
+      } else if (hasAcceptedProposal) {
+        reason =
+          "This project has an accepted proposal. You cannot delete it now.";
+      } else if (["in_progress", "completed"].includes(project.status)) {
+        reason = "In-progress or completed projects cannot be deleted.";
+      }
+      Alert.alert("Cannot delete project", reason);
+      return;
+    }
+
+    const hasProposals = proposals.length > 0;
+    Alert.alert(
+      "Delete this project?",
+      hasProposals
+        ? "This will permanently delete the project and all proposals. This action cannot be undone."
+        : "This will permanently delete the project. This action cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              setIsDeleting(true);
+
+              if (hasProposals) {
+                await supabase.from("bids").delete().eq("project_id", id);
+              }
+
+              const { error: deleteError } = await supabase
+                .from("projects")
+                .delete()
+                .eq("id", id)
+                .eq("client_id", clientProfile?.id);
+
+              if (deleteError) {
+                const { error: cancelError } = await supabase
+                  .from("projects")
+                  .update({ status: "cancelled" })
+                  .eq("id", id)
+                  .eq("client_id", clientProfile?.id);
+
+                if (cancelError) {
+                  throw deleteError;
+                }
+
+                Alert.alert(
+                  "Project cancelled",
+                  "Could not delete due to existing activity. The project was cancelled instead.",
+                );
+              } else {
+                Alert.alert(
+                  "Project deleted",
+                  "Your project has been deleted successfully.",
+                );
+              }
+
+              router.replace("/(tab)/projects");
+            } catch (error) {
+              console.error("Delete project error:", error);
+              Alert.alert(
+                "Delete failed",
+                error.message || "Unable to delete this project.",
+              );
+            } finally {
+              setIsDeleting(false);
+            }
+          },
+        },
+      ],
+    );
+  };
 
   return (
     <ScrollView style={s.container}>
@@ -837,15 +1089,30 @@ export default function ProjectDetails() {
                               {p.status}
                             </Text>
                           </View>
-                          {p.status === "pending" && !transaction && (
+                          <View style={s.proposalActions}>
                             <TouchableOpacity
-                              style={s.acceptBtn}
-                              onPress={() => handleAcceptProposal(p)}
+                              style={s.viewProfileBtn}
+                              onPress={() =>
+                                router.push({
+                                  pathname: "/freelancer/[id]",
+                                  params: { id: p.freelancer_id },
+                                })
+                              }
                             >
-                              <CheckCircle size={16} color="#FFF" />
-                              <Text style={s.acceptText}>Accept & Pay</Text>
+                              <Text style={s.viewProfileText}>
+                                View Profile
+                              </Text>
                             </TouchableOpacity>
-                          )}
+                            {p.status === "pending" && !transaction && (
+                              <TouchableOpacity
+                                style={s.acceptBtn}
+                                onPress={() => handleAcceptProposal(p)}
+                              >
+                                <CheckCircle size={16} color="#FFF" />
+                                <Text style={s.acceptText}>Accept & Pay</Text>
+                              </TouchableOpacity>
+                            )}
+                          </View>
                         </View>
                       </View>
                     );
@@ -904,6 +1171,23 @@ export default function ProjectDetails() {
                 </Text>
               </View>
             </View>
+
+            {isOwner && (
+              <TouchableOpacity
+                style={[s.deleteBtn, !canDeleteProject && s.deleteBtnDisabled]}
+                onPress={handleDeleteProject}
+                disabled={isDeleting}
+              >
+                {isDeleting ? (
+                  <ActivityIndicator size="small" color={theme.surface} />
+                ) : (
+                  <>
+                    <Trash2 size={18} color={theme.surface} />
+                    <Text style={s.deleteBtnText}>Delete Project</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            )}
 
             {canApply && (
               <TouchableOpacity
@@ -1132,6 +1416,103 @@ export default function ProjectDetails() {
                     <ActivityIndicator color="#FFF" />
                   ) : (
                     <Text style={s.paymentConfirmText}>Confirm Payment</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+        {/**release funds ratin and reviews */}
+        <Modal
+          visible={isReleaseConfirmOpen}
+          animationType="fade"
+          transparent={true}
+          onRequestClose={() => {
+            setIsReleaseConfirmOpen(false);
+            setReleaseRating(0);
+            setReleaseFeedback("");
+          }}
+        >
+          <View style={s.modalOverlay}>
+            <View style={s.releaseModal}>
+              <View style={s.releaseIcon}>
+                <Shield size={28} color={theme.primary} />
+              </View>
+              <Text style={s.releaseTitle}>Confirm Satisfaction</Text>
+              <Text style={s.releaseSubtitle}>
+                Please rate the freelancer’s work before releasing payment.
+              </Text>
+
+              <View style={s.releaseSummary}>
+                <Text style={s.releaseSummaryLabel}>Amount to release</Text>
+                <Text style={s.releaseSummaryValue}>
+                  $
+                  {Number(
+                    transaction?.freelancer_amount || transaction?.amount || 0,
+                  ).toFixed(2)}
+                </Text>
+              </View>
+
+              <View style={s.ratingRow}>
+                {[1, 2, 3, 4, 5].map((value) => (
+                  <TouchableOpacity
+                    key={value}
+                    onPress={() => setReleaseRating(value)}
+                    activeOpacity={0.7}
+                  >
+                    <Star
+                      size={26}
+                      color={
+                        value <= releaseRating ? theme.warning : theme.border
+                      }
+                      fill={
+                        value <= releaseRating ? theme.warning : "transparent"
+                      }
+                    />
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <Text style={s.releaseNote}>
+                Important: Releasing payment is final and cannot be undone.
+              </Text>
+
+              <Text style={s.releaseFeedbackLabel}>Feedback (optional)</Text>
+              <TextInput
+                style={s.releaseFeedbackInput}
+                placeholder="Share a quick note about the work..."
+                placeholderTextColor={theme.textMuted}
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
+                value={releaseFeedback}
+                onChangeText={setReleaseFeedback}
+                maxLength={500}
+              />
+
+              <View style={s.modalButtons}>
+                <TouchableOpacity
+                  style={s.cancelBtn}
+                  onPress={() => {
+                    setIsReleaseConfirmOpen(false);
+                    setReleaseRating(0);
+                    setReleaseFeedback("");
+                  }}
+                >
+                  <Text style={s.cancelText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    s.submitBtn,
+                    releaseRating < 1 && s.submitBtnDisabled,
+                  ]}
+                  onPress={handleConfirmRelease}
+                  disabled={releaseRating < 1 || isLoading}
+                >
+                  {isLoading ? (
+                    <ActivityIndicator color="#FFF" size="small" />
+                  ) : (
+                    <Text style={s.submitText}>Confirm & Release Payment</Text>
                   )}
                 </TouchableOpacity>
               </View>
@@ -1425,6 +1806,26 @@ const styles = (theme) =>
       borderTopWidth: 1,
       borderTopColor: theme.divider,
     },
+    proposalActions: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      flexWrap: "wrap",
+      justifyContent: "flex-end",
+    },
+    viewProfileBtn: {
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: theme.border,
+      backgroundColor: theme.surfaceAlt,
+    },
+    viewProfileText: {
+      fontSize: 12,
+      color: theme.textSecondary,
+      fontWeight: "600",
+    },
     proposalStatus: {
       paddingHorizontal: 12,
       paddingVertical: 6,
@@ -1474,6 +1875,19 @@ const styles = (theme) =>
     },
     timelineRow: { flexDirection: "row", alignItems: "center", gap: 8 },
     timelineText: { fontSize: 14, color: theme.textSecondary },
+    deleteBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 10,
+      backgroundColor: theme.error,
+      paddingVertical: 14,
+      borderRadius: 14,
+    },
+    deleteBtnDisabled: {
+      opacity: 0.6,
+    },
+    deleteBtnText: { color: theme.surface, fontSize: 15, fontWeight: "700" },
     applyBtn: {
       flexDirection: "row",
       alignItems: "center",
@@ -1611,6 +2025,83 @@ const styles = (theme) =>
     },
     submitBtnDisabled: { backgroundColor: theme.textMuted },
     submitText: { fontSize: 16, fontWeight: "600", color: "#FFF" },
+
+    releaseModal: {
+      backgroundColor: theme.surface,
+      borderRadius: 20,
+      margin: 20,
+      padding: 24,
+    },
+    releaseIcon: {
+      width: 56,
+      height: 56,
+      borderRadius: 16,
+      backgroundColor: theme.iconBg,
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: 16,
+      alignSelf: "center",
+    },
+    releaseTitle: {
+      fontSize: 20,
+      fontWeight: "800",
+      color: theme.text,
+      textAlign: "center",
+      marginBottom: 8,
+    },
+    releaseSubtitle: {
+      fontSize: 14,
+      color: theme.textSecondary,
+      textAlign: "center",
+      marginBottom: 16,
+      lineHeight: 20,
+    },
+    releaseSummary: {
+      backgroundColor: theme.background,
+      borderRadius: 12,
+      padding: 14,
+      marginBottom: 16,
+    },
+    releaseSummaryLabel: {
+      fontSize: 12,
+      color: theme.textSecondary,
+      marginBottom: 6,
+    },
+    releaseSummaryValue: {
+      fontSize: 20,
+      fontWeight: "800",
+      color: theme.success,
+    },
+    ratingRow: {
+      flexDirection: "row",
+      justifyContent: "center",
+      gap: 8,
+      marginBottom: 12,
+    },
+    releaseNote: {
+      fontSize: 12,
+      color: theme.textSecondary,
+      textAlign: "center",
+      marginBottom: 12,
+    },
+    releaseFeedbackLabel: {
+      fontSize: 13,
+      color: theme.textSecondary,
+      marginBottom: 6,
+    },
+    releaseFeedbackInput: {
+      backgroundColor: theme.inputBg,
+      borderWidth: 1,
+      borderColor: theme.inputBorder,
+      borderRadius: 12,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      fontSize: 14,
+      color: theme.text,
+      minHeight: 90,
+      textAlignVertical: "top",
+      marginBottom: 8,
+    },
 
     paymentModal: {
       backgroundColor: theme.surface,

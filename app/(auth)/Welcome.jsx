@@ -17,7 +17,15 @@ import {
   Users,
   Video,
 } from "lucide-react-native";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from "react-native";
 
 const categories = [
   {
@@ -112,201 +120,226 @@ const stats = [
 ];
 
 export default function Welcome() {
+  const { width } = useWindowDimensions();
+  const isDesktop = Platform.OS === "web" && width >= 1024;
+
   return (
     <ScrollView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Pressable
-          onPress={() => router.push("/")}
-          style={styles.logoContainer}
-        >
-          <View style={styles.logoIcon}>
-            <Briefcase size={20} color="#FFFFFF" />
-          </View>
-          <Text style={styles.logoText}>FreelanceHub</Text>
-        </Pressable>
-
-        <View style={styles.headerButtons}>
-          <Pressable onPress={() => router.push("/login")}>
-            <Text style={styles.signInText}>Sign In</Text>
-          </Pressable>
+        <View style={[styles.sectionContent, styles.headerContent]}>
           <Pressable
-            onPress={() => router.push("/login")}
-            style={styles.getStartedButton}
+            onPress={() => router.push("/")}
+            style={styles.logoContainer}
           >
-            <Text style={styles.getStartedText}>Get Started</Text>
+            <View style={styles.logoIcon}>
+              <Briefcase size={20} color="#FFFFFF" />
+            </View>
+            <Text style={styles.logoText}>FreelanceHub</Text>
           </Pressable>
+
+          <View style={styles.headerButtons}>
+            <Pressable onPress={() => router.push("/login")}>
+              <Text style={styles.signInText}>Sign In</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => router.push("/login")}
+              style={styles.getStartedButton}
+            >
+              <Text style={styles.getStartedText}>Get Started</Text>
+            </Pressable>
+          </View>
         </View>
       </View>
 
       {/* Hero Section */}
       <View style={styles.hero}>
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>
-            🚀 Trusted by 10M+ professionals worldwide
+        <View style={[styles.sectionContent, styles.heroContent]}>
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>
+              🚀 Trusted by 10M+ professionals worldwide
+            </Text>
+          </View>
+
+          <Text style={styles.heroTitle}>
+            Find the perfect{"\n"}
+            <Text style={styles.heroTitleAccent}>freelancer</Text> for{"\n"}
+            your project
           </Text>
-        </View>
 
-        <Text style={styles.heroTitle}>
-          Find the perfect{"\n"}
-          <Text style={styles.heroTitleAccent}>freelancer</Text> for{"\n"}
-          your project
-        </Text>
+          <Text style={styles.heroDescription}>
+            Connect with top talent worldwide. Post your project, receive
+            competitive proposals, and hire the best freelancers to bring your
+            vision to life.
+          </Text>
 
-        <Text style={styles.heroDescription}>
-          Connect with top talent worldwide. Post your project, receive
-          competitive proposals, and hire the best freelancers to bring your
-          vision to life.
-        </Text>
+          <View style={styles.heroCTAs}>
+            <Pressable
+              onPress={() => router.push("/login")}
+              style={styles.primaryButton}
+            >
+              <Text style={styles.primaryButtonText}>Find Freelancers</Text>
+              <ArrowRight size={20} color="#FFFFFF" />
+            </Pressable>
 
-        <View style={styles.heroCTAs}>
-          <Pressable
-            onPress={() => router.push("/login")}
-            style={styles.primaryButton}
-          >
-            <Text style={styles.primaryButtonText}>Find Freelancers</Text>
-            <ArrowRight size={20} color="#FFFFFF" />
-          </Pressable>
+            <Pressable
+              onPress={() => router.push("/login")}
+              style={styles.secondaryButton}
+            >
+              <Text style={styles.secondaryButtonText}>Start Freelancing</Text>
+            </Pressable>
+          </View>
 
-          <Pressable
-            onPress={() => router.push("/login")}
-            style={styles.secondaryButton}
-          >
-            <Text style={styles.secondaryButtonText}>Start Freelancing</Text>
-          </Pressable>
-        </View>
-
-        {/* Stats Bar */}
-        <View style={styles.statsBar}>
-          {stats.map((stat) => {
-            const Icon = stat.icon;
-            return (
-              <View key={stat.label} style={styles.statItem}>
-                <View style={styles.statTop}>
-                  <Icon size={18} color="#2563EB" />
-                  <Text style={styles.statValue}>{stat.value}</Text>
+          {/* Stats Bar */}
+          <View style={styles.statsBar}>
+            {stats.map((stat) => {
+              const Icon = stat.icon;
+              return (
+                <View key={stat.label} style={styles.statItem}>
+                  <View style={styles.statTop}>
+                    <Icon size={18} color="#2563EB" />
+                    <Text style={styles.statValue}>{stat.value}</Text>
+                  </View>
+                  <Text style={styles.statLabel}>{stat.label}</Text>
                 </View>
-                <Text style={styles.statLabel}>{stat.label}</Text>
-              </View>
-            );
-          })}
+              );
+            })}
+          </View>
         </View>
       </View>
 
       {/* Categories */}
       <View style={styles.categoriesSection}>
-        <Text style={styles.sectionTitle}>Browse by Category</Text>
-        <Text style={styles.sectionSubtitle}>
-          Explore thousands of skilled professionals in every field
-        </Text>
+        <View style={styles.sectionContent}>
+          <Text style={styles.sectionTitle}>Browse by Category</Text>
+          <Text style={styles.sectionSubtitle}>
+            Explore thousands of skilled professionals in every field
+          </Text>
 
-        <View style={styles.categoriesGrid}>
-          {categories.map((category) => {
-            const Icon = category.icon;
-            return (
-              <Pressable
-                key={category.name}
-                onPress={() => router.push("/login")}
-                style={styles.categoryCard}
-              >
-                <View
+          <View style={styles.categoriesGrid}>
+            {categories.map((category) => {
+              const Icon = category.icon;
+              return (
+                <Pressable
+                  key={category.name}
+                  onPress={() => router.push("/login")}
                   style={[
-                    styles.categoryIcon,
-                    { backgroundColor: category.bgColor },
+                    styles.categoryCard,
+                    isDesktop && styles.categoryCardDesktop,
                   ]}
                 >
-                  <Icon size={28} color={category.iconColor} />
-                </View>
-                <Text style={styles.categoryName}>{category.name}</Text>
-                <Text style={styles.categoryCount}>
-                  {category.count} experts
-                </Text>
-              </Pressable>
-            );
-          })}
+                  <View
+                    style={[
+                      styles.categoryIcon,
+                      { backgroundColor: category.bgColor },
+                    ]}
+                  >
+                    <Icon size={28} color={category.iconColor} />
+                  </View>
+                  <Text style={styles.categoryName}>{category.name}</Text>
+                  <Text style={styles.categoryCount}>
+                    {category.count} experts
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
         </View>
       </View>
 
       {/* Features */}
       <View style={styles.featuresSection}>
-        <Text style={styles.sectionTitle}>Why Choose FreelanceHub?</Text>
-        <Text style={styles.sectionSubtitle}>
-          Everything you need to succeed in one platform
-        </Text>
+        <View style={styles.sectionContent}>
+          <Text style={styles.sectionTitle}>Why Choose FreelanceHub?</Text>
+          <Text style={styles.sectionSubtitle}>
+            Everything you need to succeed in one platform
+          </Text>
 
-        <View style={styles.featuresList}>
-          {features.map((feature) => {
-            const Icon = feature.icon;
-            return (
-              <View key={feature.title} style={styles.featureCard}>
-                <View style={styles.featureIcon}>
-                  <Icon size={32} color="#2563EB" />
-                </View>
+          <View
+            style={[
+              styles.featuresList,
+              isDesktop && styles.featuresListWide,
+            ]}
+          >
+            {features.map((feature) => {
+              const Icon = feature.icon;
+              return (
+                <View key={feature.title} style={styles.featureCard}>
+                  <View style={styles.featureIcon}>
+                    <Icon size={32} color="#2563EB" />
+                  </View>
 
-                <View style={styles.featureContent}>
-                  <Text style={styles.featureTitle}>{feature.title}</Text>
-                  <Text style={styles.featureDescription}>
-                    {feature.description}
-                  </Text>
-                  <View style={styles.featureStat}>
-                    <Text style={styles.featureStatValue}>
-                      {feature.stat}{" "}
-                      <Text style={styles.featureStatLabel}>
-                        {feature.statLabel}
-                      </Text>
+                  <View style={styles.featureContent}>
+                    <Text style={styles.featureTitle}>{feature.title}</Text>
+                    <Text style={styles.featureDescription}>
+                      {feature.description}
                     </Text>
+                    <View style={styles.featureStat}>
+                      <Text style={styles.featureStatValue}>
+                        {feature.stat}{" "}
+                        <Text style={styles.featureStatLabel}>
+                          {feature.statLabel}
+                        </Text>
+                      </Text>
+                    </View>
                   </View>
                 </View>
-              </View>
-            );
-          })}
+              );
+            })}
+          </View>
         </View>
       </View>
 
       {/* CTA Section */}
       <View style={styles.ctaSection}>
-        <View style={styles.ctaBadge}>
-          <Text style={styles.ctaBadgeText}>✨ Join our growing community</Text>
-        </View>
+        <View style={[styles.sectionContent, styles.ctaContent]}>
+          <View style={styles.ctaBadge}>
+            <Text style={styles.ctaBadgeText}>
+              ✨ Join our growing community
+            </Text>
+          </View>
 
-        <Text style={styles.ctaTitle}>Ready to get started?</Text>
-        <Text style={styles.ctaDescription}>
-          Join thousands of businesses and freelancers who trust FreelanceHub to
-          make work happen.
-        </Text>
+          <Text style={styles.ctaTitle}>Ready to get started?</Text>
+          <Text style={styles.ctaDescription}>
+            Join thousands of businesses and freelancers who trust FreelanceHub
+            to make work happen.
+          </Text>
 
-        <View style={styles.ctaButtons}>
-          <Pressable
-            onPress={() => router.push("/login")}
-            style={styles.ctaPrimaryButton}
-          >
-            <Text style={styles.ctaPrimaryButtonText}>Post a Project</Text>
-          </Pressable>
+          <View style={styles.ctaButtons}>
+            <Pressable
+              onPress={() => router.push("/login")}
+              style={styles.ctaPrimaryButton}
+            >
+              <Text style={styles.ctaPrimaryButtonText}>Post a Project</Text>
+            </Pressable>
 
-          <Pressable
-            onPress={() => router.push("/login")}
-            style={styles.ctaSecondaryButton}
-          >
-            <Text style={styles.ctaSecondaryButtonText}>Find Work</Text>
-          </Pressable>
+            <Pressable
+              onPress={() => router.push("/login")}
+              style={styles.ctaSecondaryButton}
+            >
+              <Text style={styles.ctaSecondaryButtonText}>Find Work</Text>
+            </Pressable>
+          </View>
         </View>
       </View>
 
       {/* Footer */}
       <View style={styles.footer}>
-        <View style={styles.footerLogo}>
-          <View style={styles.footerLogoIcon}>
-            <Briefcase size={20} color="#FFFFFF" />
+        <View style={[styles.sectionContent, styles.footerContent]}>
+          <View style={styles.footerLogo}>
+            <View style={styles.footerLogoIcon}>
+              <Briefcase size={20} color="#FFFFFF" />
+            </View>
+            <Text style={styles.footerLogoText}>FreelanceHub</Text>
           </View>
-          <Text style={styles.footerLogoText}>FreelanceHub</Text>
-        </View>
 
-        <Text style={styles.footerTagline}>
-          Connecting talent with opportunity
-        </Text>
-        <Text style={styles.footerCopyright}>
-          © {new Date().getFullYear()} FreelanceHub. All rights reserved.
-        </Text>
+          <Text style={styles.footerTagline}>
+            Connecting talent with opportunity
+          </Text>
+          <Text style={styles.footerCopyright}>
+            © {new Date().getFullYear()} FreelanceHub. All rights reserved.
+          </Text>
+        </View>
       </View>
     </ScrollView>
   );
@@ -317,6 +350,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#FFFFFF",
   },
+  sectionContent: {
+    width: "100%",
+    maxWidth: 1200,
+    alignSelf: "center",
+  },
 
   // Header
   header: {
@@ -325,6 +363,8 @@ const styles = StyleSheet.create({
     borderBottomColor: "#F3F4F6",
     paddingHorizontal: 16,
     paddingVertical: 16,
+  },
+  headerContent: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -375,6 +415,9 @@ const styles = StyleSheet.create({
     paddingVertical: 64,
     alignItems: "center",
     backgroundColor: "#F9FAFB",
+  },
+  heroContent: {
+    alignItems: "center",
   },
   badge: {
     backgroundColor: "#DBEAFE",
@@ -499,6 +542,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#F3F4F6",
   },
+  categoryCardDesktop: {
+    width: "23%",
+  },
   categoryIcon: {
     width: 56,
     height: 56,
@@ -527,6 +573,11 @@ const styles = StyleSheet.create({
   },
   featuresList: {
     gap: 24,
+  },
+  featuresListWide: {
+    maxWidth: 900,
+    alignSelf: "center",
+    width: "100%",
   },
   featureCard: {
     backgroundColor: "#F9FAFB",
@@ -581,6 +632,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#2563EB",
     paddingHorizontal: 24,
     paddingVertical: 80,
+    alignItems: "center",
+  },
+  ctaContent: {
     alignItems: "center",
   },
   ctaBadge: {
@@ -645,6 +699,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#111827",
     paddingHorizontal: 24,
     paddingVertical: 48,
+    alignItems: "center",
+  },
+  footerContent: {
     alignItems: "center",
   },
   footerLogo: {

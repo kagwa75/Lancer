@@ -31,6 +31,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from "react-native";
 import { uploadFile } from "../../../constants/imageService";
@@ -160,6 +161,8 @@ export default function ClientProfile() {
   const { user, userRole, loading: authLoading } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
+  const { width } = useWindowDimensions();
+  const isDesktop = Platform.OS === "web" && width >= 1024;
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -753,7 +756,7 @@ export default function ClientProfile() {
         keyboardShouldPersistTaps="handled"
         ref={scrollRef}
       >
-        <View style={styles.content}>
+        <View style={[styles.content, isDesktop && styles.contentWide]}>
           {/* Header */}
           <View style={styles.header}>
             <View>
@@ -962,8 +965,8 @@ export default function ClientProfile() {
               </TouchableOpacity>
               {!collapsedSections.personal && (
                 <View style={styles.cardContent}>
-                <View style={styles.formGrid}>
-                <View style={styles.formGroup}>
+                <View style={[styles.formGrid, isDesktop && styles.formGridWide]}>
+                <View style={[styles.formGroup, isDesktop && styles.formGroupWide]}>
                   <Text style={styles.label}>Full Name</Text>
                   <TextInput
                     style={[
@@ -983,7 +986,7 @@ export default function ClientProfile() {
                     </Text>
                   )}
                 </View>
-                <View style={styles.formGroup}>
+                <View style={[styles.formGroup, isDesktop && styles.formGroupWide]}>
                   <Text style={styles.label}>Position</Text>
                   <TextInput
                     style={styles.input}
@@ -995,7 +998,7 @@ export default function ClientProfile() {
                     }
                   />
                 </View>
-                <View style={styles.formGroup}>
+                <View style={[styles.formGroup, isDesktop && styles.formGroupWide]}>
                   <Text style={styles.label}>Location</Text>
                   <TextInput
                     style={styles.input}
@@ -1007,7 +1010,7 @@ export default function ClientProfile() {
                     }
                   />
                 </View>
-                <View style={styles.formGroup}>
+                <View style={[styles.formGroup, isDesktop && styles.formGroupWide]}>
                   <Text style={styles.label}>Phone Number</Text>
                   <TextInput
                     style={[
@@ -1084,8 +1087,8 @@ export default function ClientProfile() {
               </TouchableOpacity>
               {!collapsedSections.company && (
                 <View style={styles.cardContent}>
-              <View style={styles.formGrid}>
-                <View style={styles.formGroup}>
+              <View style={[styles.formGrid, isDesktop && styles.formGridWide]}>
+                <View style={[styles.formGroup, isDesktop && styles.formGroupWide]}>
                   <Text style={styles.label}>Company Name</Text>
                   <TextInput
                     style={[
@@ -1105,7 +1108,7 @@ export default function ClientProfile() {
                     </Text>
                   )}
                 </View>
-                <View style={styles.formGroup}>
+                <View style={[styles.formGroup, isDesktop && styles.formGroupWide]}>
                   <Text style={styles.label}>Company Website</Text>
                   <TextInput
                     style={[
@@ -1140,7 +1143,7 @@ export default function ClientProfile() {
                     </Text>
                   )}
                 </View>
-                <View style={styles.formGroup}>
+                <View style={[styles.formGroup, isDesktop && styles.formGroupWide]}>
                   <Text style={styles.label}>Company Size</Text>
                   <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                     <View style={styles.optionsContainer}>
@@ -1448,8 +1451,8 @@ export default function ClientProfile() {
               </TouchableOpacity>
               {!collapsedSections.billing && (
                 <View style={styles.cardContent}>
-              <View style={styles.formGrid}>
-                <View style={styles.formGroup}>
+              <View style={[styles.formGrid, isDesktop && styles.formGridWide]}>
+                <View style={[styles.formGroup, isDesktop && styles.formGroupWide]}>
                   <Text style={styles.label}>Street Address</Text>
                   <TextInput
                     style={styles.input}
@@ -1461,7 +1464,7 @@ export default function ClientProfile() {
                     }
                   />
                 </View>
-                <View style={styles.formGroup}>
+                <View style={[styles.formGroup, isDesktop && styles.formGroupWide]}>
                   <Text style={styles.label}>City</Text>
                   <TextInput
                     style={styles.input}
@@ -1471,7 +1474,7 @@ export default function ClientProfile() {
                     onChangeText={(text) => updateBillingAddress("city", text)}
                   />
                 </View>
-                <View style={styles.formGroup}>
+                <View style={[styles.formGroup, isDesktop && styles.formGroupWide]}>
                   <Text style={styles.label}>State/Province</Text>
                   <TextInput
                     style={styles.input}
@@ -1481,7 +1484,7 @@ export default function ClientProfile() {
                     onChangeText={(text) => updateBillingAddress("state", text)}
                   />
                 </View>
-                <View style={styles.formGroup}>
+                <View style={[styles.formGroup, isDesktop && styles.formGroupWide]}>
                   <Text style={styles.label}>Postal Code</Text>
                   <TextInput
                     style={styles.input}
@@ -1494,7 +1497,13 @@ export default function ClientProfile() {
                     }
                   />
                 </View>
-                <View style={[styles.formGroup, { flexBasis: "100%" }]}>
+                <View
+                  style={[
+                    styles.formGroup,
+                    isDesktop && styles.formGroupWide,
+                    { flexBasis: "100%" },
+                  ]}
+                >
                   <Text style={styles.label}>Country</Text>
                   <TextInput
                     style={styles.input}
@@ -1641,6 +1650,11 @@ const createStyles = (theme) =>
     },
     content: {
       paddingBottom: 32,
+    },
+    contentWide: {
+      maxWidth: 1100,
+      alignSelf: "center",
+      width: "100%",
     },
     loadingContainer: {
       flex: 1,
@@ -1962,8 +1976,17 @@ const createStyles = (theme) =>
     formGrid: {
       gap: 16,
     },
+    formGridWide: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+    },
     formGroup: {
       gap: 8,
+    },
+    formGroupWide: {
+      flexGrow: 1,
+      flexBasis: "48%",
+      minWidth: 240,
     },
     label: {
       fontSize: 14,

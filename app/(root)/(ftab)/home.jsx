@@ -398,9 +398,9 @@ const createStatCardStyles = (theme) =>
 const createStyles = (theme) =>
   StyleSheet.create({
     container: {
+      flex: 1,
       padding: 16,
       gap: 16,
-      paddingBottom: 80,
       paddingTop: 45,
       backgroundColor: theme.background,
     },

@@ -75,6 +75,7 @@ export default function MpesaPayment() {
     freelancerId,
     amount,
     commissionRate = 10,
+    usdToKesRate,
   } = params;
 
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -93,7 +94,21 @@ export default function MpesaPayment() {
   const slideAnim = React.useRef(new Animated.Value(50)).current;
   const pulseAnim = React.useRef(new Animated.Value(1)).current;
 
-  const parsedAmount = parseFloat(amount);
+  const DEFAULT_USD_TO_KES_RATE = 130;
+  const parsedUsdAmount = Number.parseFloat(amount);
+  const parsedRateFromParams = Number.parseFloat(usdToKesRate);
+  const parsedRateFromEnv = Number.parseFloat(
+    process.env.EXPO_PUBLIC_USD_TO_KES_RATE,
+  );
+  const effectiveUsdToKesRate =
+    (Number.isFinite(parsedRateFromParams) && parsedRateFromParams > 0
+      ? parsedRateFromParams
+      : Number.isFinite(parsedRateFromEnv) && parsedRateFromEnv > 0
+        ? parsedRateFromEnv
+        : DEFAULT_USD_TO_KES_RATE);
+  const parsedAmount = Number.isFinite(parsedUsdAmount)
+    ? Number.parseFloat((parsedUsdAmount * effectiveUsdToKesRate).toFixed(2))
+    : 0;
   const parsedCommission = parseFloat(commissionRate);
   const platformFee = (parsedAmount * parsedCommission) / 100;
   const freelancerAmount = parsedAmount - platformFee;
@@ -189,6 +204,14 @@ export default function MpesaPayment() {
   const handleInitiatePayment = async () => {
     Keyboard.dismiss();
 
+    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+      Alert.alert(
+        "Invalid Amount",
+        "The project amount is invalid. Please go back and try again.",
+      );
+      return;
+    }
+
     if (!phoneNumber) {
       setPhoneError("Phone number is required");
       return;
@@ -257,7 +280,9 @@ export default function MpesaPayment() {
 
       console.log("Initiating M-Pesa payment:", {
         phone: formattedPhone,
-        amount: Math.round(parsedAmount),
+        usdAmount: parsedUsdAmount,
+        exchangeRate: effectiveUsdToKesRate,
+        amountKes: Math.round(parsedAmount),
         projectId,
       });
 

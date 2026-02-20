@@ -7,6 +7,7 @@ import { Platform } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { ThemeProvider } from "../hooks/ThemeContext";
 import { AuthProvider, useAuth } from "../hooks/useAuth";
+import { StripeProvider } from "../lib/stripe-client";
 import { stripePublishableKey } from "../lib/stripe";
 
 Sentry.init({
@@ -51,15 +52,6 @@ Sentry.init({
   ],
 });
 
-// Stripe provider logic (unchanged)
-let StripeProviderComponent;
-if (Platform.OS !== "web") {
-  const StripeModule = require("@stripe/stripe-react-native");
-  StripeProviderComponent = StripeModule.StripeProvider;
-} else {
-  StripeProviderComponent = ({ children }) => <>{children}</>;
-}
-
 const queryClient = new QueryClient();
 
 const Layout = () => {
@@ -78,9 +70,9 @@ const Layout = () => {
           <AuthProvider>
             <ThemeProvider>
               {stripePublishableKey ? (
-                <StripeProviderComponent publishableKey={stripePublishableKey}>
+                <StripeProvider publishableKey={stripePublishableKey}>
                   <RootLayout />
-                </StripeProviderComponent>
+                </StripeProvider>
               ) : (
                 <RootLayout />
               )}

@@ -1,10 +1,34 @@
+import { useAuth } from "@/hooks/useAuth";
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
-import { Platform, Text, useColorScheme, View } from "react-native";
+import { Alert, Platform, Text, useColorScheme, View } from "react-native";
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
+  const { user } = useAuth();
+  const [conversations, setConversations] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  useEffect(() => {
+    if (user) {
+      loadConversations();
+    }
+  }, [user]);
+  const loadConversations = async () => {
+    if (!user?.id) return;
+
+    setIsLoading(true);
+    try {
+      const results = await getChatConversations(user.id);
+      console.log("results:", results);
+      setConversations(Array.isArray(results) ? results : []);
+    } catch (error) {
+      console.error("Error loading conversations:", error);
+      Alert.alert("Error", "Could not load conversations");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Consistent icon names with proper focused states
   const tabConfigs = [
@@ -17,7 +41,7 @@ export default function TabLayout() {
       name: "jobs",
       title: "Jobs",
       icon: { focused: "briefcase", outline: "briefcase-outline" },
-      badgeCount: 3, // Example: Could be dynamic from context/state
+      //badgeCount: 3, // Example: Could be dynamic from context/state
     },
     {
       name: "proposals",
@@ -28,7 +52,7 @@ export default function TabLayout() {
       name: "conversations",
       title: "Chats",
       icon: { focused: "chatbubble", outline: "chatbubble-outline" },
-      badgeCount: 5, // Example: Unread messages count
+      ConversatonCount: conversations?.length, // Example: Unread messages count
     },
   ];
 
@@ -109,6 +133,34 @@ export default function TabLayout() {
                     </Text>
                   </View>
                 )}
+                {tab.ConversatonCount && tab.ConversatonCount > 0 && (
+                  <View
+                    style={{
+                      position: "absolute",
+                      top: -6,
+                      right: -6,
+                      backgroundColor: "#ef4444", // Red-500
+                      borderRadius: 10,
+                      minWidth: 18,
+                      height: 18,
+                      justifyContent: "center",
+                      alignItems: "center",
+                      borderWidth: 2,
+                      borderColor: isDark ? "#0f172a" : "#f8fafc",
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: "white",
+                        fontSize: 10,
+                        fontWeight: "bold",
+                        paddingHorizontal: 4,
+                      }}
+                    >
+                      {tab.ConversatonCount > 9 ? "9+" : tab.ConversatonCount}
+                    </Text>
+                  </View>
+                )}
               </View>
             ),
           }}
@@ -120,7 +172,9 @@ export default function TabLayout() {
 
 // Optional: Add haptic feedback for better UX (iOS only)
 import * as Haptics from "expo-haptics";
+import { useEffect, useState } from "react";
 import { Pressable } from "react-native";
+import { getChatConversations } from "../../../lib/supabase";
 
 const PressableWithHaptic = ({ children, onPress, ...props }) => {
   const handlePress = () => {
