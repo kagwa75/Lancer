@@ -74,7 +74,7 @@ export default function NewProject() {
   useEffect(() => {
     if (!loading) {
       if (!user) {
-        router.push("/auth");
+        router.push("/(auth)/login");
       } else if (userRole !== "client") {
         router.push("/(ftab)/home");
       }

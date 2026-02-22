@@ -546,14 +546,8 @@ export default function SettingsScreen() {
     );
   };
 
-  const handleOpenLink = (url) => {
-    Linking.openURL(url).catch((err) =>
-      console.error("Failed to open URL:", err),
-    );
-  };
-
   const handleContactSupport = () => {
-    const email = "support@yourapp.com";
+    const email = "support@lancer.app";
     const subject = "Support Request";
     const body = `User ID: ${user?.id}\nRole: ${currentRole}\n\nDescribe your issue:\n`;
 
@@ -828,7 +822,7 @@ export default function SettingsScreen() {
 
           <Pressable
             style={styles.settingItem}
-            onPress={() => handleOpenLink("https://yourapp.com/terms")}
+            onPress={() => router.push("/terms")}
           >
             <View style={styles.settingLeft}>
               <Text style={styles.settingText}>Terms of Service</Text>
@@ -838,7 +832,7 @@ export default function SettingsScreen() {
 
           <Pressable
             style={styles.settingItem}
-            onPress={() => handleOpenLink("https://yourapp.com/privacy")}
+            onPress={() => router.push("/privacy-policy")}
           >
             <View style={styles.settingLeft}>
               <Text style={styles.settingText}>Privacy Policy</Text>

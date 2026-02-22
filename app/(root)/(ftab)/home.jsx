@@ -212,7 +212,7 @@ export default function FreelancerDashboard() {
 
             <Pressable
               style={styles.outlineBtn}
-              onPress={() => router.push("/profile")}
+              onPress={() => router.push("/(Details)/fprofile")}
             >
               <Text style={styles.outlineBtnText}>Complete Profile</Text>
             </Pressable>

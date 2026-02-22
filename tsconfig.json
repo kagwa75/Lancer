@@ -12,9 +12,7 @@
     ".expo/types/**/*.ts",
     "expo-env.d.ts",
     "hooks/useAuth.jsx",
-    "supabase/functions/create-escrow-payment/index.ts",
-    "supabase/functions/refund-escrow/index.ts",
-    "supabase/functions/create_escrow/index.ts",
     "components/SentryFeedback.jsx"
-  ]
+  ],
+  "exclude": ["supabase/functions/**/*"]
 }

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Alert, Linking } from "react-native";
-import api from "../lib/api";
+import api, { STRIPE_API_URL } from "../lib/api";
 import { useToast } from "./use-toast";
 
 export const useStripeConnection = ({ user, fetchProfile }) => {
@@ -23,8 +23,8 @@ export const useStripeConnection = ({ user, fetchProfile }) => {
       const response = await api.post("/stripe/connect-account", {
         userId: user.id,
         email: user.email,
-        refreshUrl: `${api.defaults.baseURL}/stripe/refresh?userId=${user.id}`,
-        returnUrl: `${api.defaults.baseURL}/stripe/success?userId=${user.id}`,
+        refreshUrl: `${STRIPE_API_URL}/stripe/refresh?userId=${user.id}`,
+        returnUrl: `${STRIPE_API_URL}/stripe/success?userId=${user.id}`,
       });
 
       const { accountLink } = response.data;

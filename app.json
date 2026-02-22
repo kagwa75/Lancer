@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "lancer",
-    "slug": "lancer",
+    "slug": "jobs",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/lancer.png",
@@ -79,15 +79,15 @@
       "stripePublishableKey": "pk_test_51SricTAKaiR3hK9GiZ4f0N0EiuN3yijWRAj80HsSHnKSivm1BLXj7YuHO2C97e0wdWRDk5GVTEs4Xx0PV8CKy5LG00D17tBT3r",
       "router": {},
       "eas": {
-        "projectId": "95dccba2-5f0e-4da6-9f57-33a7908a1e70"
+        "projectId": "d7983c1e-a9e5-4a7d-b1a8-5489571c2aca"
       }
     },
     "runtimeVersion": {
       "policy": "appVersion"
     },
     "updates": {
-      "url": "https://u.expo.dev/95dccba2-5f0e-4da6-9f57-33a7908a1e70"
+      "url": "https://u.expo.dev/d7983c1e-a9e5-4a7d-b1a8-5489571c2aca"
     },
-    "owner": "kagwa75s-organization"
+    "owner": "jameshub"
   }
 }

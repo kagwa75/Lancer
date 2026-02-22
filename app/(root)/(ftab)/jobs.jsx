@@ -26,7 +26,7 @@ import { FetchCategories } from "../../../lib/supabase";
 
 export default function FindWork() {
   const { theme, isDark } = useTheme();
-  const { user, userRole, authLoading, loading } = useAuth();
+  const { user, userRole, loading: authLoading } = useAuth();
   const navigation = useNavigation();
   const router = useRouter();
   const isFocused = useIsFocused();
@@ -128,7 +128,7 @@ export default function FindWork() {
 
   const styles = createStyles(theme);
 
-  if (loading || userRole !== "freelancer") {
+  if (authLoading || userRole !== "freelancer") {
     return (
       <SafeAreaView style={styles.safeArea}>
         <ActivityIndicator size="large" color={theme.primary} />

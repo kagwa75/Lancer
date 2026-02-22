@@ -1,7 +1,7 @@
 import { useTheme } from "@/hooks/ThemeContext";
 import { useAuth } from "@/hooks/useAuth";
 import { FontAwesome5, MaterialIcons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -26,6 +26,7 @@ const passwordSchema = z
 const nameSchema = z.string().min(2, "Name must be at least 2 characters");
 
 export default function AuthScreen() {
+  const { mode } = useLocalSearchParams();
   const { theme } = useTheme();
   const styles = createStyles(theme);
   const { width } = useWindowDimensions();
@@ -49,6 +50,14 @@ export default function AuthScreen() {
     loadingMessage,
   } = useAuth();
   const router = useRouter();
+
+  useEffect(() => {
+    if (mode === "signup") {
+      setIsSignUp(true);
+    } else if (mode === "signin") {
+      setIsSignUp(false);
+    }
+  }, [mode]);
 
   useEffect(() => {
     if (user) {

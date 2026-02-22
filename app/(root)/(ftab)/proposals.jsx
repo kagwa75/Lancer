@@ -30,7 +30,7 @@ import {
 import { getAllBids } from "../../../lib/supabase";
 
 export default function MyProposals() {
-  const { user, userRole, authLoading, loading } = useAuth();
+  const { user, userRole, loading: authLoading } = useAuth();
   const { theme, isDark } = useTheme();
   const styles = createStyles(theme);
   const navigation = useNavigation();
@@ -194,7 +194,7 @@ export default function MyProposals() {
     return "Not specified";
   };
 
-  if (loading || userRole !== "freelancer") {
+  if (authLoading || userRole !== "freelancer") {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.loadingCenter}>

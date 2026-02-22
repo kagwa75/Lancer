@@ -533,12 +533,12 @@ export default function ClientDashboard() {
 
             <Pressable
               style={styles.quickActionCard}
-              onPress={() => router.push("/profile")}
+              onPress={() => router.push("/client-edit-details")}
             >
               <View style={styles.quickActionIcon}>
                 <User size={24} color={theme.text} />
               </View>
-              <Text style={styles.quickActionText}>Profile</Text>
+              <Text style={styles.quickActionText}>Quick Edit</Text>
             </Pressable>
           </View>
         </View>
