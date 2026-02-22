@@ -42,9 +42,13 @@
         {
           "android": {
             "usesCleartextTraffic": true,
-            "enableProguardInReleaseBuilds": true,
             "enableShrinkResourcesInReleaseBuilds": true,
-            "enableMinifyInReleaseBuilds": true
+            "enableMinifyInReleaseBuilds": true,
+            "enableBundleCompression": true,
+            "buildArchs": [
+              "arm64-v8a"
+            ],
+            "extraProguardRules": "-dontwarn com.stripe.android.pushProvisioning.**\n-dontwarn com.google.android.gms.tapandpay.**"
           }
         }
       ],
@@ -79,7 +83,7 @@
       "stripePublishableKey": "pk_test_51SricTAKaiR3hK9GiZ4f0N0EiuN3yijWRAj80HsSHnKSivm1BLXj7YuHO2C97e0wdWRDk5GVTEs4Xx0PV8CKy5LG00D17tBT3r",
       "router": {},
       "eas": {
-        "projectId": "d7983c1e-a9e5-4a7d-b1a8-5489571c2aca"
+        "projectId": "cf376f62-f814-498a-95d0-5967d45d33e2"
       }
     },
     "runtimeVersion": {
@@ -88,6 +92,6 @@
     "updates": {
       "url": "https://u.expo.dev/d7983c1e-a9e5-4a7d-b1a8-5489571c2aca"
     },
-    "owner": "jameshub"
+    "owner": "james-hub"
   }
 }

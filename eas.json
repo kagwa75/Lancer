@@ -19,6 +19,9 @@
         "SENTRY_AUTH_TOKEN": "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"
       },
       "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
       "autoIncrement": true,
       "channel": "preview"
     },
